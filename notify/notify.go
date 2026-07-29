@@ -56,14 +56,10 @@ func getNotifyText(
 	showEmoji bool,
 ) string {
 	return "*" + run.Name + hostnameIfExists(hostname) + ":" +
-		logRunId(run.Id) + "* - " +
+		strconv.FormatInt(run.Id, 10) + "* - " +
 		core.FormatStatus(run.Status, showEmoji) +
 		tagChannelIfStatusConfigured(run.Status, tagStatuses) +
 		logFileAndOutput(run.NotifyLogContent, run.LogFile)
-}
-
-func logRunId(runId int64) string {
-	return strconv.FormatInt(runId, 10)
 }
 
 func logFileAndOutput(notifyLogContent bool, logFile string) string {

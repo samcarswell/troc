@@ -20,6 +20,7 @@ type RunShow struct {
 	Status        string `json:"status"`
 	Duration      string `json:"duration"`
 	Pid           string `json:"pid"`
+	IsArchived    bool   `json:"is_archived"`
 }
 
 type JobShow struct {

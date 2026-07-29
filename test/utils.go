@@ -17,9 +17,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/samcarswell/trochilus/config"
-	"github.com/samcarswell/trochilus/core"
-	"github.com/samcarswell/trochilus/data"
+	"github.com/samcarswell/troc/config"
+	"github.com/samcarswell/troc/core"
+	"github.com/samcarswell/troc/data"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -134,6 +134,10 @@ func AssertLogHasWarn(t *testing.T, text string, log Log) {
 
 func AssertLogDoesNotHaveInfo(t *testing.T, text string, log Log) {
 	assertLogDoesNotHaveLine(t, "INFO", text, log)
+}
+
+func AssertLogDoesNotHaveWarn(t *testing.T, text string, log Log) {
+	assertLogDoesNotHaveLine(t, "WARN", text, log)
 }
 
 func assertLogHasLine(t *testing.T, level string, text string, log Log) {

@@ -10,6 +10,17 @@ import (
 	"database/sql"
 )
 
+const archiveRun = `-- name: ArchiveRun :exec
+update runs
+set is_archived = true
+where id = ?
+`
+
+func (q *Queries) ArchiveRun(ctx context.Context, id int64) error {
+	_, err := q.db.ExecContext(ctx, archiveRun, id)
+	return err
+}
+
 const createJob = `-- name: CreateJob :one
 insert into jobs
     (name, notify_log_content)
@@ -96,9 +107,60 @@ func (q *Queries) GetJobs(ctx context.Context) ([]GetJobsRow, error) {
 	return items, nil
 }
 
+const getNonArchivedRunsBeforeDate = `-- name: GetNonArchivedRunsBeforeDate :many
+select
+    runs.id, runs.job_id, runs.start_time, runs.end_time, runs.log_file, runs.exec_log_file, runs.status, runs.pid, runs.is_archived,
+    jobs.id, jobs.name, jobs.notify_log_content
+from runs, jobs
+where runs.job_id = jobs.id
+and is_archived = false
+and runs.end_time < ?1
+`
+
+type GetNonArchivedRunsBeforeDateRow struct {
+	Run Run
+	Job Job
+}
+
+func (q *Queries) GetNonArchivedRunsBeforeDate(ctx context.Context, endTime sql.NullTime) ([]GetNonArchivedRunsBeforeDateRow, error) {
+	rows, err := q.db.QueryContext(ctx, getNonArchivedRunsBeforeDate, endTime)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []GetNonArchivedRunsBeforeDateRow
+	for rows.Next() {
+		var i GetNonArchivedRunsBeforeDateRow
+		if err := rows.Scan(
+			&i.Run.ID,
+			&i.Run.JobID,
+			&i.Run.StartTime,
+			&i.Run.EndTime,
+			&i.Run.LogFile,
+			&i.Run.ExecLogFile,
+			&i.Run.Status,
+			&i.Run.Pid,
+			&i.Run.IsArchived,
+			&i.Job.ID,
+			&i.Job.Name,
+			&i.Job.NotifyLogContent,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getRun = `-- name: GetRun :one
 select
-    runs.id, runs.job_id, runs.start_time, runs.end_time, runs.log_file, runs.exec_log_file, runs.status, runs.pid,
+    runs.id, runs.job_id, runs.start_time, runs.end_time, runs.log_file, runs.exec_log_file, runs.status, runs.pid, runs.is_archived,
     jobs.id, jobs.name, jobs.notify_log_content
 from runs, jobs
 where runs.job_id = jobs.id
@@ -122,6 +184,7 @@ func (q *Queries) GetRun(ctx context.Context, id int64) (GetRunRow, error) {
 		&i.Run.ExecLogFile,
 		&i.Run.Status,
 		&i.Run.Pid,
+		&i.Run.IsArchived,
 		&i.Job.ID,
 		&i.Job.Name,
 		&i.Job.NotifyLogContent,
@@ -131,20 +194,26 @@ func (q *Queries) GetRun(ctx context.Context, id int64) (GetRunRow, error) {
 
 const getRuns = `-- name: GetRuns :many
 select
-    runs.id, runs.job_id, runs.start_time, runs.end_time, runs.log_file, runs.exec_log_file, runs.status, runs.pid,
+    runs.id, runs.job_id, runs.start_time, runs.end_time, runs.log_file, runs.exec_log_file, runs.status, runs.pid, runs.is_archived,
     jobs.id, jobs.name, jobs.notify_log_content
 from runs, jobs
 where runs.job_id = jobs.id
 and (?1 = '' or jobs.name = ?1)
+and (?2 or runs.is_archived = ?2)
 `
+
+type GetRunsParams struct {
+	Column1 interface{}
+	Column2 interface{}
+}
 
 type GetRunsRow struct {
 	Run Run
 	Job Job
 }
 
-func (q *Queries) GetRuns(ctx context.Context, dollar_1 interface{}) ([]GetRunsRow, error) {
-	rows, err := q.db.QueryContext(ctx, getRuns, dollar_1)
+func (q *Queries) GetRuns(ctx context.Context, arg GetRunsParams) ([]GetRunsRow, error) {
+	rows, err := q.db.QueryContext(ctx, getRuns, arg.Column1, arg.Column2)
 	if err != nil {
 		return nil, err
 	}
@@ -161,6 +230,7 @@ func (q *Queries) GetRuns(ctx context.Context, dollar_1 interface{}) ([]GetRunsR
 			&i.Run.ExecLogFile,
 			&i.Run.Status,
 			&i.Run.Pid,
+			&i.Run.IsArchived,
 			&i.Job.ID,
 			&i.Job.Name,
 			&i.Job.NotifyLogContent,

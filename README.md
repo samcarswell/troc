@@ -1,10 +1,10 @@
-# Trochilus
+# Troc
 
 Simple cron (or any script) monitoring
 
 <img src="static/the-crons-friend.jpg" alt="The Cron's Friend" width="512"/>
 
-*The Cron's Friend* - Named after the legendary bird described by Herodotus in [The Histories](https://en.wikipedia.org/wiki/Trochilus_(crocodile_bird)).
+*The Cron's Friend* - Named after the legendary bird [Trochilus](https://en.wikipedia.org/wiki/Trochilus_(crocodile_bird)) described by Herodotus in [The Histories](https://en.wikipedia.org/wiki/Histories_(Herodotus)).
 
 ## Features
 
@@ -18,10 +18,10 @@ Simple cron (or any script) monitoring
 
 ## Build
 
-Checkout the relevant release tag. eg. `0.3.0`; you can build on any commit but there might be issues.
+Checkout the relevant release tag. eg. `0.5.0`; you can build on any commit but there might be issues.
 
 ```bash
-git checkout 0.3.0
+git checkout 0.5.0
 ./build
 ```
 
@@ -101,17 +101,18 @@ eg. `TROC_DATABASE` or `TROC_NOTIFY_SLACK_TOKEN`.
 | `notify.hostname` | Name of server when pushing notifications. eg. `job-name@hostname` | Output of `hostname` |
 | `notify.slack.token` | Token for slack app. | 
 | `notify.slack.channel` | Slack channel to post notifications. | 
-| `notify.status.succeeded` | Tags `@channel` for `Succeeded` status. | `false`
-| `notify.status.failed` | Tags `@channel` for `Failed` status. | `true`
-| `notify.status.running` | Tags `@channel` for `Running` status. | `false`
-| `notify.status.skipped` | Tags `@channel` for `Skipped` status. | `false`
-| `notify.status.terminated` | Tags `@channel` for `Terminated` status. | `true`
-| `display.emoji` | Displays emojis. | `true`
-| `display.color.status.succeeded` | Colours text output for `Succeeded` status. | `false`
-| `display.color.status.failed` | Colours text output for `Failed` status. | `false`
-| `display.color.status.running` | Colours text output for `Running` status. | `false`
-| `display.color.status.skipped` | Colours text output for `Skipped` status. | `false`
-| `display.color.status.terminated` | Colours text output for `Terminated` status. | `false`
+| `notify.status.succeeded` | Tags `@channel` for `Succeeded` status. | `false` |
+| `notify.status.failed` | Tags `@channel` for `Failed` status. | `true` |
+| `notify.status.running` | Tags `@channel` for `Running` status. | `false` |
+| `notify.status.skipped` | Tags `@channel` for `Skipped` status. | `false` |
+| `notify.status.terminated` | Tags `@channel` for `Terminated` status. | `true` |
+| `display.emoji` | Displays emojis. | `true` |
+| `display.color.status.succeeded` | Colours text output for `Succeeded` status. | `false` |
+| `display.color.status.failed` | Colours text output for `Failed` status. | `false` |
+| `display.color.status.running` | Colours text output for `Running` status. | `false` |
+| `display.color.status.skipped` | Colours text output for `Skipped` status. | `false` |
+| `display.color.status.terminated` | Colours text output for `Terminated` status. | `false` |
+| `clean.days` | Number of days to keep runs when running `troc clean` | `30` |
 
 Any invocation of `troc` will check for a database located at the `database` config value.
 If it does not exist, it will create it.
@@ -157,8 +158,8 @@ Output:
 If you have the `notify.slack.*` config values, you can append `--notify` to the `troc exec`
 command to send a notification in slack:
 
-```
-daily-sync@example-server: run 84 - ✅: Succeeded
+```markdown
+*daily-sync@example-server:84* - ✅: Succeeded
 Log: /tmp/daily-sync.3159256558.log
 ```
 
@@ -198,13 +199,34 @@ it's state is still `Running`.
 If the run is still in progress, and `troc run term` has been ran on it,
 the run will still correctly update it's state once it completes.
 
+### Archive a run
+
+Use `troc run archive` to archive a run; this will remove all log files,
+and hide it from appearing in `troc run list`.
+
 ### Run history
 
-Use `troc run list` to see a list of historical runs. Optionally filter on `--name`.
+Use `troc run list` to see a list of historical runs. Optionally filter on `--name`,
+or `--include-archived`.
 
 ### Update job info
 
 A job name and log settings can be updated using `troc job update`.
+
+### Outputting run output to slack
+
+Configure the relevant job using `--notify-log` with the `troc job [add|update]` command.
+This will include the raw run output in the slack message:
+
+```markdown
+daily-sync@example-server: run 84 - ✅: Succeeded
+This is output from the job
+```
+
+### Clean old runs and system log files
+
+Use `troc clean` to archive all runs older than `clean.days`, and remove
+any miscellaneous system log files.
 
 ### Crontab example:
 
@@ -255,9 +277,6 @@ at startup; so just adding the migration file to that directory is enough.
 
 `go test ./...`
 
-### Test coverage
-
-`./coverage` to open a browser with the test coverage info.
 
 ## Goals
 

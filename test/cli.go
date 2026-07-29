@@ -49,8 +49,16 @@ func (t TrocRun) List() TrocCmd {
 	return getCmd(t.Exe, []string{"run", "list", "-f", "json"})
 }
 
+func (t TrocRun) ListArchived() TrocCmd {
+	return getCmd(t.Exe, []string{"run", "list", "-f", "json", "--include-archived"})
+}
+
 func (t TrocRun) Kill(runId int64) TrocCmd {
 	return getCmd(t.Exe, []string{"run", "kill", "-r", strconv.FormatInt(runId, 10), "--force"})
+}
+
+func (t TrocRun) Archive(runId int64) TrocCmd {
+	return getCmd(t.Exe, []string{"run", "archive", "-r", strconv.FormatInt(runId, 10)})
 }
 
 func (t TrocBase) Exec(name string, script string) TrocCmd {

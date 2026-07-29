@@ -38,7 +38,8 @@ select
     sqlc.embed(jobs)
 from runs, jobs
 where runs.job_id = jobs.id
-and (?1 = '' or jobs.name = ?1);
+and (?1 = '' or jobs.name = ?1)
+and (?2 or runs.is_archived = ?2);
 
 -- name: GetRun :one
 select
@@ -62,3 +63,17 @@ where id == ?1;
 update runs
 set pid = ?2
 where id == ?1;
+
+-- name: GetNonArchivedRunsBeforeDate :many
+select
+    sqlc.embed(runs),
+    sqlc.embed(jobs)
+from runs, jobs
+where runs.job_id = jobs.id
+and is_archived = false
+and runs.end_time < ?1;
+
+-- name: ArchiveRun :exec
+update runs
+set is_archived = true
+where id = ?;

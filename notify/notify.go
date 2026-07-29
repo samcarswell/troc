@@ -9,8 +9,8 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/samcarswell/trochilus/config"
-	"github.com/samcarswell/trochilus/core"
+	"github.com/samcarswell/troc/config"
+	"github.com/samcarswell/troc/core"
 )
 
 type slackPost struct {
@@ -55,8 +55,8 @@ func getNotifyText(
 	hostname string,
 	showEmoji bool,
 ) string {
-	return "*" + run.Name + hostnameIfExists(hostname) + "*: run " +
-		strconv.FormatInt(run.Id, 10) + " - " +
+	return "*" + run.Name + hostnameIfExists(hostname) + ":" +
+		strconv.FormatInt(run.Id, 10) + "* - " +
 		core.FormatStatus(run.Status, showEmoji) +
 		tagChannelIfStatusConfigured(run.Status, tagStatuses) +
 		logFileAndOutput(run.NotifyLogContent, run.LogFile)
@@ -64,7 +64,7 @@ func getNotifyText(
 
 func logFileAndOutput(notifyLogContent bool, logFile string) string {
 	if !notifyLogContent {
-		return logFileIfExists(logFile)
+		return ""
 	}
 	if logFile == "" {
 		return ""
@@ -74,7 +74,7 @@ func logFileAndOutput(notifyLogContent bool, logFile string) string {
 		log.Printf("Unable to read logfile: %s. Notify message will omit it.", logFile)
 		return ""
 	}
-	return "\nLog:\n" + "```\n" + string(logContent) + "```"
+	return "\n" + "```\n" + string(logContent) + "```"
 }
 
 func hostnameIfExists(hostname string) string {
@@ -82,13 +82,6 @@ func hostnameIfExists(hostname string) string {
 		return ""
 	}
 	return "@" + hostname
-}
-
-func logFileIfExists(logFile string) string {
-	if logFile == "" {
-		return ""
-	}
-	return "\nLog: `" + logFile + "`"
 }
 
 func tagChannelIfStatusConfigured(

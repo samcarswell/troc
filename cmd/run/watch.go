@@ -11,9 +11,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/samcarswell/trochilus/config"
-	"github.com/samcarswell/trochilus/core"
-	"github.com/samcarswell/trochilus/opts"
+	"github.com/samcarswell/troc/config"
+	"github.com/samcarswell/troc/core"
+	"github.com/samcarswell/troc/opts"
 	"github.com/spf13/cobra"
 )
 
@@ -33,9 +33,13 @@ var watchCmd = &cobra.Command{
 				core.LogErrorAndExit(logger, err)
 			}
 		}
+		if runRow.Run.IsArchived {
+			core.LogErrorAndExit(logger, errors.New("run "+strconv.FormatInt(runId, 10)+" is archived: the log has been removed"))
+		}
 
 		file, err := os.Open(runRow.Run.LogFile)
 		if err != nil {
+			core.LogErrorAndExit(logger, fmt.Errorf("log file cannot be read: %w", err))
 			return
 		}
 		defer file.Close()

@@ -6,10 +6,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/samcarswell/trochilus/config"
-	"github.com/samcarswell/trochilus/core"
-	"github.com/samcarswell/trochilus/data"
-	"github.com/samcarswell/trochilus/test"
+	"github.com/samcarswell/troc/config"
+	"github.com/samcarswell/troc/core"
+	"github.com/samcarswell/troc/data"
+	"github.com/samcarswell/troc/test"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -237,7 +237,10 @@ func Test_execRunSkippedRun(t *testing.T) {
 		[]string{"./testdata/script-passes"},
 	)
 	successfulRun := <-blocked
-	runs, err := db.GetRuns(ctx, "")
+	runs, err := db.GetRuns(ctx, data.GetRunsParams{
+		Column1: "",
+		Column2: false,
+	})
 	if err != nil {
 		t.Fatal(err.Error())
 	}

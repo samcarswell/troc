@@ -8,12 +8,14 @@ import (
 
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
-	"github.com/samcarswell/trochilus/config"
-	"github.com/samcarswell/trochilus/core"
-	"github.com/samcarswell/trochilus/opts"
+	"github.com/samcarswell/troc/config"
+	"github.com/samcarswell/troc/core"
+	"github.com/samcarswell/troc/data"
+	"github.com/samcarswell/troc/opts"
 	"github.com/spf13/cobra"
 )
 
+var includeArchivedOpt = "include-archived"
 var nameOpt = "name"
 var statusField = "Status"
 var format string
@@ -28,6 +30,7 @@ var listCmd = &cobra.Command{
 		logger := slog.Default()
 		conf := config.GetConfig()
 		jobName := opts.GetStringOptOrExit(cmd, nameOpt)
+		includeArchived := opts.GetBoolOptOrExit(cmd, includeArchivedOpt)
 		queries := config.GetDatabase(cmd.Context())
 
 		if jobName != "" {
@@ -41,7 +44,10 @@ var listCmd = &cobra.Command{
 			}
 		}
 
-		runRows, err := queries.GetRuns(cmd.Context(), jobName)
+		runRows, err := queries.GetRuns(cmd.Context(), data.GetRunsParams{
+			Column1: jobName,
+			Column2: includeArchived,
+		})
 		if err != nil {
 			core.LogErrorAndExit(slog.Default(), err)
 		}
@@ -135,5 +141,6 @@ func init() {
 	RunCmd.AddCommand(listCmd)
 
 	listCmd.Flags().String(nameOpt, "", "Name of job to filter on")
+	listCmd.Flags().Bool(includeArchivedOpt, false, "Include archived runs")
 	opts.FormatTableOpt(listCmd, &format)
 }

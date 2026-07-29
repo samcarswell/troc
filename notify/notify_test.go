@@ -3,8 +3,8 @@ package notify
 import (
 	"testing"
 
-	"github.com/samcarswell/trochilus/config"
-	"github.com/samcarswell/trochilus/core"
+	"github.com/samcarswell/troc/config"
+	"github.com/samcarswell/troc/core"
 )
 
 func Test_getNotifyText(t *testing.T) {
@@ -20,37 +20,26 @@ func Test_getNotifyText(t *testing.T) {
 		showEmoji        bool
 		tagStatuses      config.StatusConfig
 	}{
-		{"success", "test-1", 34, core.RunStatusSucceeded, "/file/path", false, "server1.com",
-			`*test-1@server1.com*: run 34 - ✅ Succeeded
-Log: ` + "`/file/path`", true, config.StatusConfig{}},
-		{"failed", "test-2", 10000000, core.RunStatusFailed, "/file/path", false, "server1.com",
-			`*test-2@server1.com*: run 10000000 - ❌ Failed <!channel>
-Log: ` + "`/file/path`", true, config.StatusConfig{Failed: true}},
-		{"no-log", "test-3", 34, core.RunStatusSucceeded, "", false, "server1.com",
-			`*test-3@server1.com*: run 34 - ✅ Succeeded`, true, config.StatusConfig{}},
-		{"empty-hostname", "test-4", 34, core.RunStatusSucceeded, "/file/path", false, "",
-			`*test-4*: run 34 - ✅ Succeeded
-Log: ` + "`/file/path`", true, config.StatusConfig{}},
+		{"success", "test-1", 34, core.RunStatusSucceeded, "", false, "server1.com",
+			`*test-1@server1.com:34* - ✅ Succeeded`, true, config.StatusConfig{}},
+		{"failed", "test-2", 10000000, core.RunStatusFailed, "", false, "server1.com",
+			`*test-2@server1.com:10000000* - ❌ Failed <!channel>`, true, config.StatusConfig{Failed: true}},
+		{"empty-hostname", "test-4", 34, core.RunStatusSucceeded, "", false, "",
+			`*test-4:34* - ✅ Succeeded`, true, config.StatusConfig{}},
 		{"notify-log-content", "test-5", 34, core.RunStatusSucceeded, "testdata/example.log", true, "",
-			`*test-5*: run 34 - ✅ Succeeded
-Log:
+			`*test-5:34* - ✅ Succeeded
 ` + "```" + "\nLine one of log\nLine two of log\n```", true, config.StatusConfig{}},
-		{"notify-log-content-file-does-not-exist", "test-6", 34, core.RunStatusSucceeded, "testdata/notreal.log", true, "", "*test-6*: run 34 - ✅ Succeeded", true, config.StatusConfig{}},
-		{"success", "test-7", 34, core.RunStatusSucceeded, "/file/path", false, "server1.com",
-			`*test-7@server1.com*: run 34 - Succeeded
-Log: ` + "`/file/path`", false, config.StatusConfig{}},
-		{"success-tag-config", "test-8", 10000000, core.RunStatusSucceeded, "/file/path", false, "server1.com",
-			`*test-8@server1.com*: run 10000000 - ✅ Succeeded <!channel>
-Log: ` + "`/file/path`", true, config.StatusConfig{Succeeded: true}},
-		{"skipped-tag-config", "test-9", 10000000, core.RunStatusSkipped, "/file/path", false, "server1.com",
-			`*test-9@server1.com*: run 10000000 - ⚠️ Skipped <!channel>
-Log: ` + "`/file/path`", true, config.StatusConfig{Skipped: true}},
-		{"running-tag-config", "test-10", 10000000, core.RunStatusRunning, "/file/path", false, "server1.com",
-			`*test-10@server1.com*: run 10000000 - 🚀 Running <!channel>
-Log: ` + "`/file/path`", true, config.StatusConfig{Running: true}},
-		{"terminated-tag-config", "test-11", 10000000, core.RunStatusTerminated, "/file/path", false, "server1.com",
-			`*test-11@server1.com*: run 10000000 - 💥 Terminated <!channel>
-Log: ` + "`/file/path`", true, config.StatusConfig{Terminated: true}},
+		{"notify-log-content-file-does-not-exist", "test-6", 34, core.RunStatusSucceeded, "", true, "", "*test-6:34* - ✅ Succeeded", true, config.StatusConfig{}},
+		{"success", "test-7", 34, core.RunStatusSucceeded, "", false, "server1.com",
+			`*test-7@server1.com:34* - Succeeded`, false, config.StatusConfig{}},
+		{"success-tag-config", "test-8", 10000000, core.RunStatusSucceeded, "", false, "server1.com",
+			`*test-8@server1.com:10000000* - ✅ Succeeded <!channel>`, true, config.StatusConfig{Succeeded: true}},
+		{"skipped-tag-config", "test-9", 10000000, core.RunStatusSkipped, "", false, "server1.com",
+			`*test-9@server1.com:10000000* - ⚠️ Skipped <!channel>`, true, config.StatusConfig{Skipped: true}},
+		{"running-tag-config", "test-10", 10000000, core.RunStatusRunning, "", false, "server1.com",
+			`*test-10@server1.com:10000000* - 🚀 Running <!channel>`, true, config.StatusConfig{Running: true}},
+		{"terminated-tag-config", "test-11", 10000000, core.RunStatusTerminated, "", false, "server1.com",
+			`*test-11@server1.com:10000000* - 💥 Terminated <!channel>`, true, config.StatusConfig{Terminated: true}},
 	}
 
 	for _, d := range data {

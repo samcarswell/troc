@@ -11,9 +11,8 @@ import (
 	"path"
 	"strings"
 
-	slogmulti "github.com/samber/slog-multi"
-	"github.com/samcarswell/trochilus/config"
-	"github.com/samcarswell/trochilus/core"
+	"github.com/samcarswell/troc/config"
+	"github.com/samcarswell/troc/core"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -27,10 +26,10 @@ var version = "development"
 var RootCmd = &cobra.Command{
 	Use:     cliName,
 	Version: version,
-	Short:   "Trochilus - simple job monitoring",
-	Long: `Trochilus - simple job monitoring
+	Short:   "troc - simple job monitoring",
+	Long: `troc - simple job monitoring
 	
-https://github.com/samcarswell/trochilus
+https://github.com/samcarswell/troc
 	`,
 	PersistentPreRun: func(cmd *cobra.Command, args []string) {
 		setupContext(cmd)
@@ -51,7 +50,7 @@ func setupContext(cmd *cobra.Command) {
 		if err != nil {
 			core.LogErrorAndExit(slog.Default(), err, errors.New("unable to create trocsys log"))
 		}
-		l = slog.New(slogmulti.Fanout(
+		l = slog.New(slog.NewMultiHandler(
 			slog.Default().Handler(),
 			slog.NewJSONHandler(logFile, core.GetSlogHandlerOptions()),
 		))
@@ -97,6 +96,7 @@ func init() {
 	}
 	viper.SetDefault("database", path.Join(homedir, ".config", "troc", "troc.db"))
 	viper.SetDefault("logdir", os.TempDir())
+	viper.SetDefault("clean.days", 30)
 	viper.SetDefault("lockdir", os.TempDir())
 	viper.SetDefault("notify.hostname", hostname)
 	viper.SetDefault("localtime", true)

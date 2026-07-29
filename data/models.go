@@ -24,4 +24,5 @@ type Run struct {
 	ExecLogFile string
 	Status      string
 	Pid         sql.NullInt64
+	IsArchived  bool
 }

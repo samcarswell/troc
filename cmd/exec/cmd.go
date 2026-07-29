@@ -17,12 +17,12 @@ import (
 	"syscall"
 
 	"github.com/gofrs/flock"
-	"github.com/samcarswell/trochilus/cmd"
-	"github.com/samcarswell/trochilus/config"
-	"github.com/samcarswell/trochilus/core"
-	"github.com/samcarswell/trochilus/data"
-	"github.com/samcarswell/trochilus/notify"
-	"github.com/samcarswell/trochilus/opts"
+	"github.com/samcarswell/troc/cmd"
+	"github.com/samcarswell/troc/config"
+	"github.com/samcarswell/troc/core"
+	"github.com/samcarswell/troc/data"
+	"github.com/samcarswell/troc/notify"
+	"github.com/samcarswell/troc/opts"
 	"github.com/spf13/cobra"
 )
 

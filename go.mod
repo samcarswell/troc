@@ -1,4 +1,4 @@
-module github.com/samcarswell/trochilus
+module github.com/samcarswell/troc
 
 go 1.26.0
 

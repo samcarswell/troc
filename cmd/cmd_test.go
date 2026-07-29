@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/samcarswell/trochilus/core"
-	"github.com/samcarswell/trochilus/test"
+	"github.com/samcarswell/troc/core"
+	"github.com/samcarswell/troc/test"
 	"github.com/stretchr/testify/assert"
 )
 

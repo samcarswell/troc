@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 
-	"github.com/samcarswell/trochilus/core"
+	"github.com/samcarswell/troc/core"
 	"github.com/spf13/cobra"
 )
 

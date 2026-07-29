@@ -7,5 +7,5 @@ VERSION=$(git describe --tags)
 echo "Building troc version $VERSION executable at $OUTPUT_FILE"
 
 # Use `go tool nm` to find this
-LDFLAGS="-X 'github.com/samcarswell/trochilus/cmd.version=$VERSION'"
+LDFLAGS="-X 'github.com/samcarswell/troc/cmd.version=$VERSION'"
 go build -o $OUTPUT_FILE -ldflags="$LDFLAGS" main.go

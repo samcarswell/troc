@@ -4,7 +4,7 @@ Copyright © 2025 Samuel Carswell <samuelrcarswell@gmail.com>
 package cmd
 
 import (
-	"github.com/samcarswell/trochilus/cmd"
+	"github.com/samcarswell/troc/cmd"
 	"github.com/spf13/cobra"
 )
 

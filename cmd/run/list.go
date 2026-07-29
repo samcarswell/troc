@@ -8,10 +8,10 @@ import (
 
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/jedib0t/go-pretty/v6/text"
-	"github.com/samcarswell/trochilus/config"
-	"github.com/samcarswell/trochilus/core"
-	"github.com/samcarswell/trochilus/data"
-	"github.com/samcarswell/trochilus/opts"
+	"github.com/samcarswell/troc/config"
+	"github.com/samcarswell/troc/core"
+	"github.com/samcarswell/troc/data"
+	"github.com/samcarswell/troc/opts"
 	"github.com/spf13/cobra"
 )
 

@@ -1,10 +1,10 @@
-# Trochilus
+# Troc
 
 Simple cron (or any script) monitoring
 
 <img src="static/the-crons-friend.jpg" alt="The Cron's Friend" width="512"/>
 
-*The Cron's Friend* - Named after the legendary bird described by Herodotus in [The Histories](https://en.wikipedia.org/wiki/Trochilus_(crocodile_bird)).
+*The Cron's Friend* - Named after the legendary bird [Trochilus](https://en.wikipedia.org/wiki/Trochilus_(crocodile_bird)) described by Herodotus in [The Histories](https://en.wikipedia.org/wiki/Histories_(Herodotus)).
 
 ## Features
 

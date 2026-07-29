@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/samcarswell/trochilus/test"
+	"github.com/samcarswell/troc/test"
 )
 
 func Test_clearSystemLogs(t *testing.T) {

@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/samcarswell/trochilus/core"
-	"github.com/samcarswell/trochilus/data"
+	"github.com/samcarswell/troc/core"
+	"github.com/samcarswell/troc/data"
 	"github.com/spf13/viper"
 	_ "modernc.org/sqlite"
 

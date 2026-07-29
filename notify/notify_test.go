@@ -3,8 +3,8 @@ package notify
 import (
 	"testing"
 
-	"github.com/samcarswell/trochilus/config"
-	"github.com/samcarswell/trochilus/core"
+	"github.com/samcarswell/troc/config"
+	"github.com/samcarswell/troc/core"
 )
 
 func Test_getNotifyText(t *testing.T) {

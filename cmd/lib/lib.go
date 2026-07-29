@@ -7,7 +7,7 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/samcarswell/trochilus/data"
+	"github.com/samcarswell/troc/data"
 )
 
 func ArchiveRun(

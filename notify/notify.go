@@ -9,8 +9,8 @@ import (
 	"os"
 	"strconv"
 
-	"github.com/samcarswell/trochilus/config"
-	"github.com/samcarswell/trochilus/core"
+	"github.com/samcarswell/troc/config"
+	"github.com/samcarswell/troc/core"
 )
 
 type slackPost struct {

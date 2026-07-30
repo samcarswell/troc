@@ -188,12 +188,20 @@ type CleanConfig struct {
 type NotifyConfig struct {
 	Hostname string
 	Slack    SlackConfig
+	Campfire CampfireConfig
 	Status   StatusConfig
+	System   string // TOOD: rename this
 }
 
 type SlackConfig struct {
 	Token   string
 	Channel string
+}
+
+type CampfireConfig struct {
+	Token  string
+	RoomId string
+	Domain string
 }
 
 type StatusConfig struct {
@@ -234,9 +242,15 @@ func GetConfig() Config {
 		LocalTime: viper.GetBool("localtime"),
 		Notify: NotifyConfig{
 			Hostname: viper.GetString("notify.hostname"),
+			System:   viper.GetString("notify.system"),
 			Slack: SlackConfig{
 				Token:   viper.GetString("notify.slack.token"),
 				Channel: viper.GetString("notify.slack.channel"),
+			},
+			Campfire: CampfireConfig{
+				Token:  viper.GetString("notify.campfire.token"),
+				RoomId: viper.GetString("notify.campfire.roomid"),
+				Domain: viper.GetString("notify.campfire.domain"),
 			},
 			Status: StatusConfig{
 				Succeeded:  viper.GetBool("notify.status.succeeded"),

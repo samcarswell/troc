@@ -81,7 +81,7 @@ func NotifyRun(
 		))
 	default:
 		// TODO: this should actually fail at config parsing
-		return false, errors.New("unknown system: " + conf.Notify.System)
+		return false, errors.New("unknown notification system: " + conf.Notify.System)
 	}
 }
 

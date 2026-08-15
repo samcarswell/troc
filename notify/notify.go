@@ -5,13 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 
 	"github.com/samcarswell/troc/config"
 	"github.com/samcarswell/troc/core"
+	"github.com/samcarswell/troc/data"
 )
 
 type notifySystemOpts struct {
@@ -60,11 +63,13 @@ const slackPostMessage = "https://slack.com/api/chat.postMessage"
 
 func NotifyRun(
 	conf config.Config,
-	run RunNotifyInfo,
+	run data.GetRunRow,
+	logger *slog.Logger,
 ) (bool, error) {
+
 	switch conf.Notify.System {
 	case "slack":
-		return notifySlack(conf.Notify.Slack, getNotifyTextSlack(
+		return notifySlack(conf.Notify.Slack, getNotifyText(
 			run,
 			conf.Notify.Status,
 			conf.Notify.Hostname,
@@ -72,7 +77,7 @@ func NotifyRun(
 			SlackOpts,
 		))
 	case "campfire":
-		return notifyCampfire(conf.Notify.Campfire, getNotifyTextSlack(
+		return notifyCampfire(conf.Notify.Campfire, getNotifyText(
 			run,
 			conf.Notify.Status,
 			conf.Notify.Hostname,
@@ -80,26 +85,81 @@ func NotifyRun(
 			CampfireOpts,
 		))
 	default:
-		// TODO: this should actually fail at config parsing
-		return false, errors.New("unknown notification system: " + conf.Notify.System)
+		var systemConf *config.CustomNotifySystemConfigItem
+		var found = false
+		for _, row := range conf.Notify.Custom {
+			if row.Name == conf.Notify.System {
+				systemConf = &row
+				found = true
+			}
+		}
+		if !found {
+			return false, errors.New("unknown notification system: " + conf.Notify.System)
+		}
+		logger.Info("Executing custom notifier: " + conf.Notify.System)
+
+		var runNotifyCmd *exec.Cmd
+		if strings.ContainsAny(systemConf.Command, " ") {
+			cmds := strings.Split(systemConf.Command, " ")
+			runNotifyCmd = exec.Command(cmds[0], cmds[1:]...)
+		} else {
+			runNotifyCmd = exec.Command(systemConf.Command)
+		}
+
+		var jsonBytes, err = json.Marshal(run)
+		if err != nil {
+			return false, err
+		}
+
+		runNotifyCmd.Env = systemConf.EnvVars
+
+		runNotifyCmd.Stdin = bytes.NewReader(jsonBytes)
+		runNotifyCmd.Stdout = notifyLogger{
+			Logger: logger,
+			Name:   systemConf.Name,
+		}
+		runNotifyCmd.Stderr = notifyLogger{
+			Logger: logger,
+			Name:   systemConf.Name,
+		}
+		err = runNotifyCmd.Start()
+		if err != nil {
+			return false, errors.Join(errors.New("unable to start custom notify command for "+systemConf.Name), err)
+		}
+		err = runNotifyCmd.Wait()
+		if err != nil {
+			return false, errors.Join(errors.New("unable to wait for custom notify command for "+systemConf.Name), err)
+		}
 	}
+	return true, nil
 }
 
-// Returns the notification test for a run.
+type notifyLogger struct {
+	Logger *slog.Logger
+	Name   string
+}
+
+func (dl notifyLogger) Write(p []byte) (n int, err error) {
+	dl.Logger.Info(dl.Name + ": " + strings.TrimRight(string(p), "\n"))
+	return len(p), nil
+}
+
+// Returns the notification text for a run.
 // This is designed to ignore incorrect inputs; ensuring a notification is sent
 // is critical; if it's missing some information, that's acceptable.
-func getNotifyTextSlack(
-	run RunNotifyInfo,
+func getNotifyText(
+	run data.GetRunRow,
 	tagStatuses config.StatusConfig,
 	hostname string,
 	showEmoji bool,
 	opts notifySystemOpts,
 ) string {
-	return opts.BoldStart + run.Name + hostnameIfExists(hostname) + ":" +
-		strconv.FormatInt(run.Id, 10) + opts.BoldEnd + " - " +
-		core.FormatStatus(run.Status, showEmoji) +
-		tagChannelIfStatusConfigured(run.Status, tagStatuses, opts) +
-		logFileAndOutput(run.NotifyLogContent, run.LogFile, opts)
+	status := core.RunStatus(run.Run.Status)
+	return opts.BoldStart + run.Job.Name + hostnameIfExists(hostname) + ":" +
+		strconv.FormatInt(run.Run.ID, 10) + opts.BoldEnd + " - " +
+		core.FormatStatus(core.RunStatus(status), showEmoji) +
+		tagChannelIfStatusConfigured(status, tagStatuses, opts) +
+		logFileAndOutput(run.Job.NotifyLogContent, run.Run.LogFile, opts)
 }
 
 func logFileAndOutput(

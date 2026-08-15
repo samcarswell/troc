@@ -122,7 +122,10 @@ func init() {
 	viper.SetConfigName(configName)
 	viper.SetConfigType(configType)
 	viper.AutomaticEnv()
-	config.CreateAndReadConfig(confPath, configName, configType)
+	err = config.CreateAndReadConfig(confPath, configName, configType)
+	if err != nil {
+		core.LogErrorAndExit(logger, err, errors.New("unable to create configuration"))
+	}
 }
 
 func getLogType() bool {

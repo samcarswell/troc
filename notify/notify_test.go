@@ -5,10 +5,11 @@ import (
 
 	"github.com/samcarswell/troc/config"
 	"github.com/samcarswell/troc/core"
+	"github.com/samcarswell/troc/data"
 )
 
 func Test_getNotifyTextSlack(t *testing.T) {
-	data := []struct {
+	testData := []struct {
 		name             string
 		jobName          string
 		runId            int64
@@ -42,15 +43,19 @@ func Test_getNotifyTextSlack(t *testing.T) {
 			`*test-11@server1.com:10000000* - 💥 Terminated <!channel>`, true, config.StatusConfig{Terminated: true}},
 	}
 
-	for _, d := range data {
+	for _, d := range testData {
 		t.Run(d.name, func(t *testing.T) {
-			notifyStr := getNotifyTextSlack(
-				RunNotifyInfo{
-					Name:             d.jobName,
-					NotifyLogContent: d.notifyLogContent,
-					Id:               d.runId,
-					Status:           d.runStatus,
-					LogFile:          d.logFile,
+			notifyStr := getNotifyText(
+				data.GetRunRow{
+					Run: data.Run{
+						ID:      d.runId,
+						LogFile: d.logFile,
+						Status:  string(d.runStatus),
+					},
+					Job: data.Job{
+						Name:             d.jobName,
+						NotifyLogContent: d.notifyLogContent,
+					},
 				},
 				d.tagStatuses,
 				d.hostname,
@@ -68,7 +73,7 @@ func Test_getNotifyTextSlack(t *testing.T) {
 }
 
 func Test_getNotifyTextCampfire(t *testing.T) {
-	data := []struct {
+	testData := []struct {
 		name             string
 		jobName          string
 		runId            int64
@@ -102,15 +107,19 @@ func Test_getNotifyTextCampfire(t *testing.T) {
 			`<b>test-11@server1.com:10000000</b> - 💥 Terminated`, true, config.StatusConfig{Terminated: true}},
 	}
 
-	for _, d := range data {
+	for _, d := range testData {
 		t.Run(d.name, func(t *testing.T) {
-			notifyStr := getNotifyTextSlack(
-				RunNotifyInfo{
-					Name:             d.jobName,
-					NotifyLogContent: d.notifyLogContent,
-					Id:               d.runId,
-					Status:           d.runStatus,
-					LogFile:          d.logFile,
+			notifyStr := getNotifyText(
+				data.GetRunRow{
+					Run: data.Run{
+						ID:      d.runId,
+						LogFile: d.logFile,
+						Status:  string(d.runStatus),
+					},
+					Job: data.Job{
+						Name:             d.jobName,
+						NotifyLogContent: d.notifyLogContent,
+					},
 				},
 				d.tagStatuses,
 				d.hostname,

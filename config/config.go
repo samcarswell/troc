@@ -11,6 +11,9 @@ import (
 	"net/url"
 	"os"
 	"path"
+	"regexp"
+	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,6 +28,14 @@ import (
 
 const ConfigDatabasePath = "database"
 const ConfigLogDir = "logdir"
+
+const ConfigNotifySystemSlack = "slack"
+const ConfigNotifySystemCampfire = "campfire"
+
+var reservedNotifySystems = []string{
+	ConfigNotifySystemSlack,
+	ConfigNotifySystemCampfire,
+}
 
 func expandDir(path string) (string, error) {
 	if strings.HasSuffix(path, "~") {
@@ -54,10 +65,10 @@ func CreateAndReadConfig(
 	confDir string,
 	confName string,
 	confType string,
-) {
+) error {
 	expandedConfigDir, err := expandDir(confDir)
 	if err != nil {
-		core.LogErrorAndExit(slog.Default(), err, errors.New("unable to expand configuration directory "+confDir))
+		return errors.Join(err, errors.New("unable to expand configuration directory "+confDir))
 	}
 	err = viper.ReadInConfig()
 	if err != nil {
@@ -66,17 +77,18 @@ func CreateAndReadConfig(
 			log.Println("Creating config directory at " + expandedConfigDir)
 			err := os.MkdirAll(expandedConfigDir, os.ModePerm)
 			if err != nil {
-				core.LogErrorAndExit(slog.Default(), err, errors.New("unable to create configuration directory "+expandedConfigDir))
+				return errors.Join(err, errors.New("unable to create configuration directory "+expandedConfigDir))
 			}
 			log.Println("Creating initial config file at " + expandedConfigDir + "/" + confName + "." + confType)
 			err = viper.SafeWriteConfig()
 			if err != nil {
-				core.LogErrorAndExit(slog.Default(), err, errors.New("unable to write initial config"))
+				return errors.Join(err, errors.New("unable to write initial config"))
 			}
 		} else {
-			core.LogErrorAndExit(slog.Default(), err, errors.New("unable to read config"))
+			return errors.Join(err, errors.New("unable to read config"))
 		}
 	}
+	return setAndValidateConfig()
 }
 
 type dbLogger struct {
@@ -185,12 +197,19 @@ type CleanConfig struct {
 	Days int
 }
 
+type CustomNotifySystemConfigItem struct {
+	Name    string   `mapstructure:"name"`
+	Command string   `mapstructure:"command"`
+	EnvVars []string `mapstructure:"envvars"`
+}
+
 type NotifyConfig struct {
 	Hostname string
 	Slack    SlackConfig
 	Campfire CampfireConfig
 	Status   StatusConfig
-	System   string // TOOD: rename this
+	System   string
+	Custom   []CustomNotifySystemConfigItem
 }
 
 type SlackConfig struct {
@@ -231,8 +250,18 @@ type Config struct {
 	Display   DisplayConfig
 }
 
-func GetConfig() Config {
-	return Config{
+var config Config
+
+func setAndValidateConfig() error {
+	var customNotifyConfs *[]CustomNotifySystemConfigItem
+	if slices.Contains(viper.AllKeys(), "notify.custom") {
+		err := viper.UnmarshalKey("notify.custom", &customNotifyConfs)
+		if err != nil {
+			return err
+		}
+	}
+
+	conf := Config{
 		Database: viper.GetString("database"),
 		LockDir:  viper.GetString("lockdir"),
 		LogDir:   viper.GetString("logdir"),
@@ -259,6 +288,7 @@ func GetConfig() Config {
 				Skipped:    viper.GetBool("notify.status.skipped"),
 				Terminated: viper.GetBool("notify.status.terminated"),
 			},
+			Custom: *customNotifyConfs,
 		},
 		Display: DisplayConfig{
 			Emoji: viper.GetBool("display.emoji"),
@@ -273,6 +303,47 @@ func GetConfig() Config {
 			},
 		},
 	}
+	var customNotifySystems = map[string]string{}
+	errs := []error{}
+	if customNotifyConfs != nil {
+		r, _ := regexp.Compile(`^([a-zA-Z0-9])\w+=(.+)`)
+		for i, x := range conf.Notify.Custom {
+			_, ok := customNotifySystems[x.Name]
+			if !ok {
+				customNotifySystems[x.Name] = ""
+			} else {
+				errs = append(errs, errors.New("notify.custom."+strconv.Itoa(i)+".name "+x.Name+" used more than once"))
+			}
+			for i2, e := range x.EnvVars {
+				if !r.MatchString(e) {
+					errs = append(errs, errors.New("notify.custom."+strconv.Itoa(i)+".envars."+strconv.Itoa(i2)+" is not a valid envvar"))
+				}
+			}
+			if x.Command == "" {
+				errs = append(errs, errors.New("notify.custom."+strconv.Itoa(i)+".command is empty"))
+			}
+			if slices.Contains(reservedNotifySystems, x.Name) {
+				errs = append(errs, errors.New("notify.custom."+strconv.Itoa(i)+".name "+x.Name+" is using a reserved system name"))
+			}
+		}
+	}
+
+	if !slices.Contains(reservedNotifySystems, conf.Notify.System) {
+		_, ok := customNotifySystems[conf.Notify.System]
+		if !ok {
+			errs = append(errs, errors.New("notify.system "+conf.Notify.System+" is not a valid notification system"))
+		}
+	}
+
+	config = conf
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	}
+	return nil
+}
+
+func GetConfig() Config {
+	return config
 }
 
 type loggerKey struct{}

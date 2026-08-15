@@ -23,16 +23,7 @@ func Test_execRunNonExistentJob(t *testing.T) {
 		LockDir: t.TempDir(),
 		LogDir:  t.TempDir(),
 	}
-	run := execRun(
-		ctx,
-		logger,
-		jobName,
-		false,
-		conf,
-		db,
-		logFile,
-		[]string{"./testdata/script-passes"},
-	)
+	run := execRun(ctx, logger, jobName, conf, db, logFile, []string{"./testdata/script-passes"})
 	dbJob, err := db.GetJob(ctx, jobName)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -90,16 +81,7 @@ func Test_execRunExistentJob(t *testing.T) {
 		t.Fatal(err.Error())
 	}
 
-	run := execRun(
-		ctx,
-		logger,
-		jobName,
-		false,
-		conf,
-		db,
-		logFile,
-		[]string{"./testdata/script-passes"},
-	)
+	run := execRun(ctx, logger, jobName, conf, db, logFile, []string{"./testdata/script-passes"})
 	dbJob, err := db.GetJob(ctx, jobName)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -145,16 +127,7 @@ func Test_execRunScriptFails(t *testing.T) {
 		LockDir: t.TempDir(),
 		LogDir:  t.TempDir(),
 	}
-	run := execRun(
-		ctx,
-		logger,
-		jobName,
-		false,
-		conf,
-		db,
-		logFile,
-		[]string{"./testdata/script-fails"},
-	)
+	run := execRun(ctx, logger, jobName, conf, db, logFile, []string{"./testdata/script-fails"})
 	dbRun, err := db.GetRun(ctx, 1)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -178,16 +151,7 @@ func Test_execRunStdoutStderr(t *testing.T) {
 		LockDir: t.TempDir(),
 		LogDir:  t.TempDir(),
 	}
-	run := execRun(
-		ctx,
-		logger,
-		jobName,
-		false,
-		conf,
-		db,
-		logFile,
-		[]string{"./testdata/script-stdout-stderr"},
-	)
+	run := execRun(ctx, logger, jobName, conf, db, logFile, []string{"./testdata/script-stdout-stderr"})
 	dbRun, err := db.GetRun(ctx, 1)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -214,28 +178,10 @@ func Test_execRunSkippedRun(t *testing.T) {
 		LogDir:  t.TempDir(),
 	}
 	go func() {
-		blocked <- execRun(
-			ctx,
-			logger1,
-			jobName,
-			false,
-			conf,
-			db,
-			logFile1,
-			[]string{"./testdata/script-sleeps"},
-		)
+		blocked <- execRun(ctx, logger1, jobName, conf, db, logFile1, []string{"./testdata/script-sleeps"})
 	}()
 	time.Sleep(100 * time.Millisecond)
-	skippedRun := execRun(
-		ctx,
-		logger2,
-		jobName,
-		false,
-		conf,
-		db,
-		logFile2,
-		[]string{"./testdata/script-passes"},
-	)
+	skippedRun := execRun(ctx, logger2, jobName, conf, db, logFile2, []string{"./testdata/script-passes"})
 	successfulRun := <-blocked
 	runs, err := db.GetRuns(ctx, data.GetRunsParams{
 		Column1: "",
@@ -268,16 +214,7 @@ func Test_execRunComplexCommand(t *testing.T) {
 		LockDir: t.TempDir(),
 		LogDir:  t.TempDir(),
 	}
-	run := execRun(
-		ctx,
-		logger,
-		jobName,
-		false,
-		conf,
-		db,
-		logFile,
-		[]string{"echo \"Testing again...\" && echo \"and again...\" | awk '{ print toupper($0) }'"},
-	)
+	run := execRun(ctx, logger, jobName, conf, db, logFile, []string{"echo \"Testing again...\" && echo \"and again...\" | awk '{ print toupper($0) }'"})
 	dbRun, err := db.GetRun(ctx, 1)
 	if err != nil {
 		t.Fatal(err.Error())

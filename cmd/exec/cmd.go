@@ -59,12 +59,27 @@ var execCmd = &cobra.Command{
 			cmd.Context(),
 			logger,
 			jobName,
-			notifyOpt,
 			conf,
 			queries,
 			logFile,
 			args,
 		)
+
+		if notifyOpt {
+			logger.Info("Sending notify message")
+			ok, err := notify.NotifyRun(
+				conf,
+				completedRun,
+				logger,
+			)
+			if err != nil {
+				core.LogErrorAndExit(logger, err, errors.New("unable to notify"))
+			}
+			if !ok {
+				logger.Error("command was run, but notification was unable to be sent")
+			}
+		}
+
 		data := core.RunShow{
 			ID:            completedRun.Run.ID,
 			JobName:       completedRun.Job.Name,
@@ -94,7 +109,6 @@ func execRun(
 	ctx context.Context,
 	logger *slog.Logger,
 	jobName string,
-	isNotify bool,
 	conf config.Config,
 	db *data.Queries,
 	logFile string,
@@ -129,11 +143,9 @@ func execRun(
 		return skipRun(
 			jobRow.Job,
 			logFile,
-			conf,
 			db,
 			context.Background(),
 			logger,
-			isNotify,
 		)
 	}
 	if !locked {
@@ -224,37 +236,15 @@ func execRun(
 	if err != nil {
 		core.LogErrorAndExit(logger, err, errors.New("unable to get completed run"))
 	}
-
-	if isNotify {
-		logger.Info("Sending notify message")
-		ok, err := notify.NotifyRun(
-			conf,
-			notify.RunNotifyInfo{
-				Name:             completedRun.Job.Name,
-				Id:               completedRun.Run.ID,
-				Status:           core.RunStatus(completedRun.Run.Status),
-				LogFile:          completedRun.Run.LogFile,
-				NotifyLogContent: jobRow.Job.NotifyLogContent,
-			},
-		)
-		if err != nil {
-			core.LogErrorAndExit(logger, err, errors.New("unable to notify"))
-		}
-		if !ok {
-			logger.Error("command was run, but notification was unable to be sent")
-		}
-	}
 	return completedRun
 }
 
 func skipRun(
 	job data.Job,
 	execLogFile string,
-	conf config.Config,
 	queries *data.Queries,
 	ctx context.Context,
 	logger *slog.Logger,
-	isNotify bool,
 ) data.GetRunRow {
 	id, err := queries.SkipRun(ctx, data.SkipRunParams{
 		JobID:       job.ID,
@@ -270,24 +260,6 @@ func skipRun(
 		core.LogErrorAndExit(logger, err, errors.New("unable to get updated run"))
 	}
 	core.LogRunSkipped(logger, id, job.Name)
-	if isNotify {
-		ok, err := notify.NotifyRun(
-			conf,
-			notify.RunNotifyInfo{
-				Name:             run.Job.Name,
-				Id:               run.Run.ID,
-				Status:           core.RunStatus(run.Run.Status),
-				LogFile:          "",
-				NotifyLogContent: job.NotifyLogContent,
-			},
-		)
-		if err != nil {
-			core.LogErrorAndExit(logger, err, errors.New("unable to notify"))
-		}
-		if !ok {
-			logger.Error("command was run, but notification was unable to be sent")
-		}
-	}
 	row, err := queries.GetRun(ctx, run.Run.ID)
 	if err != nil {
 		core.LogErrorAndExit(logger, err, errors.New("unable to get updated run"))

@@ -112,6 +112,7 @@ func init() {
 	viper.SetDefault("notify.status.skipped", false)
 	viper.SetDefault("notify.status.terminated", true)
 	viper.SetDefault("notify.system", "slack")
+	viper.SetDefault("notify.nfty.domain", "https://ntfy.sh")
 
 	confPath, ok := os.LookupEnv("TROC_CONFIG_PATH")
 	if !ok {

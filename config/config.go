@@ -31,10 +31,12 @@ const ConfigLogDir = "logdir"
 
 const ConfigNotifySystemSlack = "slack"
 const ConfigNotifySystemCampfire = "campfire"
+const ConfigNotifySystemNfty = "ntfy"
 
 var reservedNotifySystems = []string{
 	ConfigNotifySystemSlack,
 	ConfigNotifySystemCampfire,
+	ConfigNotifySystemNfty,
 }
 
 func expandDir(path string) (string, error) {
@@ -207,6 +209,7 @@ type NotifyConfig struct {
 	Hostname string
 	Slack    SlackConfig
 	Campfire CampfireConfig
+	Ntfy     NtfyConfig
 	Status   StatusConfig
 	System   string
 	Custom   []CustomNotifySystemConfigItem
@@ -221,6 +224,18 @@ type CampfireConfig struct {
 	Token  string
 	RoomId string
 	Domain string
+}
+
+type NtfyAuth struct {
+	Username string
+	Password string
+}
+
+type NtfyConfig struct {
+	Topic  string
+	Domain string
+	Auth   NtfyAuth
+	// TODO: add domain and auth info
 }
 
 type StatusConfig struct {
@@ -280,6 +295,14 @@ func setAndValidateConfig() error {
 				Token:  viper.GetString("notify.campfire.token"),
 				RoomId: viper.GetString("notify.campfire.roomid"),
 				Domain: viper.GetString("notify.campfire.domain"),
+			},
+			Ntfy: NtfyConfig{
+				Topic:  viper.GetString("notify.ntfy.topic"),
+				Domain: viper.GetString("notify.ntfy.domain"),
+				// Auth: NtfyAuth{
+				// 	Username: viper.GetString("notify.ntfy.auth.username"),
+				// 	Password: viper.GetString("notify.ntfy.auth.password"),
+				// },
 			},
 			Status: StatusConfig{
 				Succeeded:  viper.GetBool("notify.status.succeeded"),

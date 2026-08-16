@@ -84,6 +84,15 @@ func NotifyRun(
 			conf.Display.Emoji,
 			CampfireOpts,
 		))
+	case config.ConfigNotifySystemNfty:
+		return notifyNfty(conf.Notify.Ntfy, getNotifyText(
+			run,
+			conf.Notify.Status,
+			conf.Notify.Hostname,
+			conf.Display.Emoji,
+			SlackOpts,
+		))
+
 	default:
 		var systemConf *config.CustomNotifySystemConfigItem
 		var found = false
@@ -201,6 +210,24 @@ func tagChannelIfStatusConfigured(
 		return opts.TagChannel
 	}
 	return ""
+}
+
+func notifyNfty(conf config.NtfyConfig, text string) (bool, error) {
+	r, _ := http.NewRequest("POST", conf.Domain+"/"+conf.Topic, strings.NewReader(text))
+	r.Header.Set("Markdown", "yes")
+
+	client := &http.Client{}
+	res, err := client.Do(r)
+	if err != nil {
+		return false, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode < 200 || res.StatusCode > 299 {
+		return false, errors.New("failed to notity: " + res.Status)
+	}
+
+	return true, nil
 }
 
 func notifyCampfire(conf config.CampfireConfig, text string) (bool, error) {

@@ -226,16 +226,10 @@ type CampfireConfig struct {
 	Domain string
 }
 
-type NtfyAuth struct {
-	Username string
-	Password string
-}
-
 type NtfyConfig struct {
 	Topic  string
 	Domain string
-	Auth   NtfyAuth
-	// TODO: add domain and auth info
+	Token  string
 }
 
 type StatusConfig struct {
@@ -299,10 +293,7 @@ func setAndValidateConfig() error {
 			Ntfy: NtfyConfig{
 				Topic:  viper.GetString("notify.ntfy.topic"),
 				Domain: viper.GetString("notify.ntfy.domain"),
-				// Auth: NtfyAuth{
-				// 	Username: viper.GetString("notify.ntfy.auth.username"),
-				// 	Password: viper.GetString("notify.ntfy.auth.password"),
-				// },
+				Token:  viper.GetString("notify.ntfy.token"),
 			},
 			Status: StatusConfig{
 				Succeeded:  viper.GetBool("notify.status.succeeded"),

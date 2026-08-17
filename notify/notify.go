@@ -17,7 +17,7 @@ import (
 	"github.com/samcarswell/troc/data"
 )
 
-type notifySystemOpts struct {
+type notifyMsgOpts struct {
 	BoldStart             string
 	BoldEnd               string
 	PreformattedTextStart string
@@ -25,7 +25,7 @@ type notifySystemOpts struct {
 	TagChannel            string
 }
 
-var SlackOpts = notifySystemOpts{
+var MarkdownOpts = notifyMsgOpts{
 	BoldStart:             "*",
 	BoldEnd:               "*",
 	PreformattedTextStart: "```",
@@ -33,7 +33,7 @@ var SlackOpts = notifySystemOpts{
 	TagChannel:            " <!channel>",
 }
 
-var CampfireOpts = notifySystemOpts{
+var HtmlOpts = notifyMsgOpts{
 	BoldStart:             "<b>",
 	BoldEnd:               "</b>",
 	PreformattedTextStart: "<pre>",
@@ -66,32 +66,37 @@ func NotifyRun(
 	run data.GetRunRow,
 	logger *slog.Logger,
 ) (bool, error) {
-
+	// TODO: I need to rethink how these message contents are generated
 	switch conf.Notify.System {
 	case "slack":
-		return notifySlack(conf.Notify.Slack, getNotifyText(
+		return notifySlack(conf.Notify.Slack, getNotifyTextSlack(
 			run,
 			conf.Notify.Status,
 			conf.Notify.Hostname,
 			conf.Display.Emoji,
-			SlackOpts,
+			MarkdownOpts,
 		))
-	case "campfire":
-		return notifyCampfire(conf.Notify.Campfire, getNotifyText(
-			run,
-			conf.Notify.Status,
-			conf.Notify.Hostname,
-			conf.Display.Emoji,
-			CampfireOpts,
-		))
+	// TODO: remove campfire
+	// case "campfire":
+	// 	return notifyCampfire(conf.Notify.Campfire, getNotifyTextSlack(
+	// 		run,
+	// 		conf.Notify.Status,
+	// 		conf.Notify.Hostname,
+	// 		conf.Display.Emoji,
+	// 		CampfireOpts,
+	// 	))
 	case config.ConfigNotifySystemNfty:
-		return notifyNfty(conf.Notify.Ntfy, getNotifyText(
-			run,
+		return notifyNfty(
+			conf.Notify.Ntfy,
+			getNotifyTextNtfy(
+				run,
+				MarkdownOpts,
+				conf.Notify.Hostname,
+				conf.Display.Emoji,
+			),
+			core.RunStatus(run.Run.Status),
 			conf.Notify.Status,
-			conf.Notify.Hostname,
-			conf.Display.Emoji,
-			SlackOpts,
-		))
+		)
 
 	default:
 		var systemConf *config.CustomNotifySystemConfigItem
@@ -156,12 +161,12 @@ func (dl notifyLogger) Write(p []byte) (n int, err error) {
 // Returns the notification text for a run.
 // This is designed to ignore incorrect inputs; ensuring a notification is sent
 // is critical; if it's missing some information, that's acceptable.
-func getNotifyText(
+func getNotifyTextSlack(
 	run data.GetRunRow,
 	tagStatuses config.StatusConfig,
 	hostname string,
 	showEmoji bool,
-	opts notifySystemOpts,
+	opts notifyMsgOpts,
 ) string {
 	status := core.RunStatus(run.Run.Status)
 	return opts.BoldStart + run.Job.Name + hostnameIfExists(hostname) + ":" +
@@ -171,10 +176,23 @@ func getNotifyText(
 		logFileAndOutput(run.Job.NotifyLogContent, run.Run.LogFile, opts)
 }
 
+func getNotifyTextNtfy(
+	run data.GetRunRow,
+	opts notifyMsgOpts,
+	hostname string,
+	showEmoji bool,
+) string {
+	status := core.RunStatus(run.Run.Status)
+	return opts.BoldStart + run.Job.Name + hostnameIfExists(hostname) + ":" +
+		strconv.FormatInt(run.Run.ID, 10) + opts.BoldEnd + " - " +
+		core.FormatStatus(core.RunStatus(status), showEmoji) +
+		logFileAndOutput(run.Job.NotifyLogContent, run.Run.LogFile, opts)
+}
+
 func logFileAndOutput(
 	notifyLogContent bool,
 	logFile string,
-	opts notifySystemOpts,
+	opts notifyMsgOpts,
 ) string {
 	if !notifyLogContent {
 		return ""
@@ -200,21 +218,48 @@ func hostnameIfExists(hostname string) string {
 func tagChannelIfStatusConfigured(
 	status core.RunStatus,
 	tagStatuses config.StatusConfig,
-	opts notifySystemOpts,
+	opts notifyMsgOpts,
 ) string {
-	if (status == core.RunStatusRunning && tagStatuses.Running) ||
-		(status == core.RunStatusSkipped && tagStatuses.Skipped) ||
-		(status == core.RunStatusSucceeded && tagStatuses.Succeeded) ||
-		(status == core.RunStatusFailed && tagStatuses.Failed) ||
-		(status == core.RunStatusTerminated && tagStatuses.Terminated) {
+	if shouldNotifyBePriority(status, tagStatuses) {
 		return opts.TagChannel
 	}
 	return ""
 }
 
-func notifyNfty(conf config.NtfyConfig, text string) (bool, error) {
+func shouldNotifyBePriority(
+	status core.RunStatus,
+	statusConfig config.StatusConfig,
+) bool {
+	if (status == core.RunStatusRunning && statusConfig.Running) ||
+		(status == core.RunStatusSkipped && statusConfig.Skipped) ||
+		(status == core.RunStatusSucceeded && statusConfig.Succeeded) ||
+		(status == core.RunStatusFailed && statusConfig.Failed) ||
+		(status == core.RunStatusTerminated && statusConfig.Terminated) {
+		return true
+	}
+	return false
+}
+
+func notifyNfty(
+	conf config.NtfyConfig,
+	text string,
+	status core.RunStatus,
+	statusConfig config.StatusConfig,
+) (bool, error) {
+	if conf.Topic == "" {
+		return false, errors.New("notify.ntfy.topic must be set")
+	}
+
 	r, _ := http.NewRequest("POST", conf.Domain+"/"+conf.Topic, strings.NewReader(text))
 	r.Header.Set("Markdown", "yes")
+	if conf.Token != "" {
+		r.Header.Set("Authorization", "Bearer "+conf.Token)
+	}
+	if shouldNotifyBePriority(status, statusConfig) {
+		r.Header.Set("Priority", "3")
+	} else {
+		r.Header.Set("Priority", "1")
+	}
 
 	client := &http.Client{}
 	res, err := client.Do(r)

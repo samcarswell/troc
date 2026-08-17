@@ -45,7 +45,7 @@ func Test_getNotifyTextSlack(t *testing.T) {
 
 	for _, d := range testData {
 		t.Run(d.name, func(t *testing.T) {
-			notifyStr := getNotifyText(
+			notifyStr := getNotifyTextSlack(
 				data.GetRunRow{
 					Run: data.Run{
 						ID:      d.runId,
@@ -60,7 +60,7 @@ func Test_getNotifyTextSlack(t *testing.T) {
 				d.tagStatuses,
 				d.hostname,
 				d.showEmoji,
-				SlackOpts,
+				MarkdownOpts,
 			)
 			if notifyStr != d.expected {
 				t.Error("Expected")
@@ -109,7 +109,7 @@ func Test_getNotifyTextCampfire(t *testing.T) {
 
 	for _, d := range testData {
 		t.Run(d.name, func(t *testing.T) {
-			notifyStr := getNotifyText(
+			notifyStr := getNotifyTextSlack(
 				data.GetRunRow{
 					Run: data.Run{
 						ID:      d.runId,
@@ -124,7 +124,7 @@ func Test_getNotifyTextCampfire(t *testing.T) {
 				d.tagStatuses,
 				d.hostname,
 				d.showEmoji,
-				CampfireOpts,
+				HtmlOpts,
 			)
 			if notifyStr != d.expected {
 				t.Error("Expected")

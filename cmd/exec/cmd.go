@@ -44,10 +44,10 @@ var execCmd = &cobra.Command{
 		conf := config.GetConfig()
 		queries := config.GetDatabase(cmd.Context())
 		if notifyOpt && conf.Notify.Slack.Token == "" {
-			core.LogErrorAndExit(logger, errors.New("notify is set but notify.slack.token is blank."))
+			core.LogErrorAndExit(logger, errors.New("notify is set but notify.slack.token is blank"))
 		}
 		if notifyOpt && conf.Notify.Slack.Channel == "" {
-			core.LogErrorAndExit(logger, errors.New("notify is set but notify.slack.channel is blank."))
+			core.LogErrorAndExit(logger, errors.New("notify is set but notify.slack.channel is blank"))
 		}
 
 		logFile := config.GetLogFileOrExit(logger, cmd.Context())
@@ -65,21 +65,6 @@ var execCmd = &cobra.Command{
 			args,
 		)
 
-		if notifyOpt {
-			logger.Info("Sending notify message")
-			ok, err := notify.NotifyRun(
-				conf,
-				completedRun,
-				logger,
-			)
-			if err != nil {
-				core.LogErrorAndExit(logger, err, errors.New("unable to notify"))
-			}
-			if !ok {
-				logger.Error("command was run, but notification was unable to be sent")
-			}
-		}
-
 		data := core.RunShow{
 			ID:            completedRun.Run.ID,
 			JobName:       completedRun.Job.Name,
@@ -91,6 +76,33 @@ var execCmd = &cobra.Command{
 			Pid:           core.FormatPid(completedRun.Run.Pid),
 			Duration:      core.FormatDuration(completedRun.Run.StartTime, completedRun.Run.EndTime.Time),
 		}
+
+		notifyData := core.RunNotify{
+			Run: data,
+			Job: core.JobShow{
+				ID:               completedRun.Job.ID,
+				Name:             completedRun.Job.Name,
+				NotifyLogContent: completedRun.Job.NotifyLogContent,
+			},
+			StatusConfig: conf.Notify.Status,
+			Hostname:     conf.Notify.Hostname,
+		}
+
+		if notifyOpt {
+			logger.Info("Sending notify message")
+			ok, err := notify.NotifyRun(
+				conf,
+				notifyData,
+				logger,
+			)
+			if err != nil {
+				core.LogErrorAndExit(logger, err, errors.New("unable to notify"))
+			}
+			if !ok {
+				logger.Error("command was run, but notification was unable to be sent")
+			}
+		}
+
 		core.PrintJson(data)
 	},
 }
@@ -226,10 +238,13 @@ func execRun(
 		}
 	}
 
-	db.EndRun(context.Background(), data.EndRunParams{
+	err = db.EndRun(context.Background(), data.EndRunParams{
 		Status: string(status),
 		ID:     runId,
 	})
+	if err != nil {
+		core.LogErrorAndExit(logger, err, errors.New("unable to end run"))
+	}
 	core.LogRunCompleted(logger, runId, jobName, status)
 
 	completedRun, err := db.GetRun(ctx, runId)

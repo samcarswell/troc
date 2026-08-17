@@ -207,7 +207,7 @@ type NotifyConfig struct {
 	Hostname string
 	Slack    SlackConfig
 	Ntfy     NtfyConfig
-	Status   StatusConfig
+	Status   core.StatusConfig
 	System   string
 	Custom   []CustomNotifySystemConfigItem
 }
@@ -223,16 +223,8 @@ type NtfyConfig struct {
 	Token  string
 }
 
-type StatusConfig struct {
-	Succeeded  bool
-	Failed     bool
-	Running    bool
-	Skipped    bool
-	Terminated bool
-}
-
 type ColorConfig struct {
-	Status StatusConfig
+	Status core.StatusConfig
 }
 
 type DisplayConfig struct {
@@ -281,7 +273,7 @@ func setAndValidateConfig() error {
 				Domain: viper.GetString("notify.ntfy.domain"),
 				Token:  viper.GetString("notify.ntfy.token"),
 			},
-			Status: StatusConfig{
+			Status: core.StatusConfig{
 				Succeeded:  viper.GetBool("notify.status.succeeded"),
 				Failed:     viper.GetBool("notify.status.failed"),
 				Running:    viper.GetBool("notify.status.running"),
@@ -292,7 +284,7 @@ func setAndValidateConfig() error {
 		Display: DisplayConfig{
 			Emoji: viper.GetBool("display.emoji"),
 			Color: ColorConfig{
-				Status: StatusConfig{
+				Status: core.StatusConfig{
 					Succeeded:  viper.GetBool("display.color.status.succeeded"),
 					Failed:     viper.GetBool("display.color.status.failed"),
 					Running:    viper.GetBool("display.color.status.running"),

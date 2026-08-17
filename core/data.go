@@ -23,8 +23,23 @@ type RunShow struct {
 	IsArchived    bool   `json:"is_archived"`
 }
 
+type RunNotify struct {
+	Run          RunShow      `json:"run"`
+	Job          JobShow      `json:"job"`
+	StatusConfig StatusConfig `json:"status_config"`
+	Hostname     string       `json:"hostname"`
+}
+
 type JobShow struct {
 	ID               int64  `json:"id"`
 	Name             string `json:"name"`
 	NotifyLogContent bool   `json:"notify_log_content"`
+}
+
+type StatusConfig struct {
+	Succeeded  bool `json:"succeeded"`
+	Failed     bool `json:"failed"`
+	Running    bool `json:"running"`
+	Skipped    bool `json:"skipped"`
+	Terminated bool `json:"terminated"`
 }

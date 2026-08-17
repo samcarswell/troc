@@ -8,12 +8,13 @@ Simple cron (or any script) monitoring
 
 ## Features
 
+`troc` is a wrapper for shell commands that provides the following:
 - Automatically stores stdout/stderr logs of jobs.
 - Watch and tail stdout/stderr of running or past jobs.
 - Keeps a history of all job runs in a local sqlite database.
 - Query job runs using the `troc` cli.
 - Flock functionality; ensures that only one instance of a job is ran at a time; keeps a log of skipped runs.
-- Posts run results to slack; configurable tagging of `@channel` based on run status.
+- Notifications. `ntfy` and `slack` support is built-in, but custom systems can be configured.
 - Single executable; no daemon.
 
 ## Build
@@ -99,13 +100,17 @@ eg. `TROC_DATABASE` or `TROC_NOTIFY_SLACK_TOKEN`.
 | `logdir` | Directory of job log files. | `$TMPDIR` if not empty, otherwise `/tmp` |
 | `logjson` | Output stderr system logs in json format. Note: if defined in `$HOME/.config/troc/config.yaml` this will only take affect after configuration has been loaded. Any logging that occurs before this, such as startup failures, will be in text format. If you are running `troc` in an automated fashion and are relying on stderr system logs being in a json format, ensure that the env var `TROC_LOGJSON=true` is set; this will affect log format immediately. | `false` |
 | `notify.hostname` | Name of server when pushing notifications. eg. `job-name@hostname` | Output of `hostname` |
+| `notify.system` | Determines the notification system to use. | `slack` |
+| `notify.ntfy.topic` | Ntfy topic to post notifications. | |
+| `notify.ntfy.domain` | Ntfy domain. | `https://ntfy.sh` |
+| `notify.ntfy.token` | Ntfy token. Not required for default domain. |  |
 | `notify.slack.token` | Token for slack app. | 
 | `notify.slack.channel` | Slack channel to post notifications. | 
-| `notify.status.succeeded` | Tags `@channel` for `Succeeded` status. | `false` |
-| `notify.status.failed` | Tags `@channel` for `Failed` status. | `true` |
-| `notify.status.running` | Tags `@channel` for `Running` status. | `false` |
-| `notify.status.skipped` | Tags `@channel` for `Skipped` status. | `false` |
-| `notify.status.terminated` | Tags `@channel` for `Terminated` status. | `true` |
+| `notify.status.succeeded` | Sets message as a priority: either `@channel` for Slack or `Priority=3` for ntfy, for `Succeeded` status. | `false` |
+| `notify.status.failed` | Sets message as a priority: either `@channel` for Slack or `Priority=3` for ntfy, for `Failed` status. | `true` |
+| `notify.status.running` | Sets message as a priority: either `@channel` for Slack or `Priority=3` for ntfy, for `Running` status. | `false` |
+| `notify.status.skipped` | Sets message as a priority: either `@channel` for Slack or `Priority=3` for ntfy, for `Skipped` status. | `false` |
+| `notify.status.terminated` | Sets message as a priority: either `@channel` for Slack or `Priority=3` for ntfy, for `Terminated` status. | `true` |
 | `display.emoji` | Displays emojis. | `true` |
 | `display.color.status.succeeded` | Colours text output for `Succeeded` status. | `false` |
 | `display.color.status.failed` | Colours text output for `Failed` status. | `false` |
@@ -247,6 +252,101 @@ PATH=$PATH:/usr/local/bin:/usr/bin # Ensuring that troc and rsync is in the path
 | `Terminated` | The run received a `SIGINT` or `SIGTERM`. |
 
 
+### Notifications
+
+Runs can optionally send notification messages using the `--notify` flag on `troc exec` to third-party systems.
+By default `troc` can send messages to `slack `or `ntfy`, but any system can be used provided it's accessible programmatically. 
+The priority of these notifications is determined by config values `notify.status.*`.
+If a status is set to `true`, this status will cause:
+- A priority of 3 in `ntfy`.
+- Tagging of the channel in `slack`.
+
+#### Custom systems
+
+Custom notification systems can be set using config values `notify.custom.[INDEX].[name|command|envvars]` where:
+- `name` sets the unique identifier for this notification system.
+- `command` sets the command to be run on notify.
+- `envvars` sets environment variables to be available in the command.
+
+`troc` will pass the following json object as stdin to `command`:
+
+```json
+{
+  "run": {
+    "id": 23902,
+    "job_name": "say-hello",
+    "start_time": "2026-08-17 15:24:04 +0930 AEST",
+    "end_time": "2026-08-17 15:24:04 +0930 AEST",
+    "log_file": "/tmp/log-output.1308558633.log",
+    "system_log_file": "/tmp/trocsys_mtnve_20260817T055404.log",
+    "status": "Failed",
+    "duration": "0s",
+    "pid": "82459",
+    "is_archived": false
+  },
+  "job": {
+    "id": 63,
+    "name": "say-hello",
+    "notify_log_content": true
+  },
+  "status_config": {
+    "succeeded": false,
+    "failed": true,
+    "running": false,
+    "skipped": false,
+    "terminated": true
+  },
+  "hostname": "fedora"
+}
+```
+
+Where:
+- `run` is the run information.
+- `job` is the job information.
+- `status_config` is the `notify.status` configuration value.
+- `hostname` is the `notify.hostname` configuration value.
+
+##### Example using `wall`
+
+`~/.config/troc/config.yaml`:
+```yaml
+...
+notify:
+    system: wall # Using our custom 'wall' notify
+    custom:
+      - name: wall
+        command: /tmp/wall.sh
+        envvars:
+          - WALL_MSG=A job has been run
+...
+```
+
+`/tmp/wall.sh`:
+```bash
+#!/bin/bash
+
+# Read stdin json object
+readarray text 
+
+# Read values
+JOB=$(echo $text | jq -r '.job.name')
+ID=$(echo $text | jq -r '.run.id')
+STATUS=$(echo $text | jq -r '.run.status')
+MESSAGE="$WALL_MSG: $ID:$JOB - $STATUS"
+
+# Send to third-party system 
+wall "$MESSAGE"
+
+```
+
+Executing `troc exec --name say-hello --notify "echo 'Hello!'"` will cause the following popup on all shells:
+
+```
+Broadcast message from user@fedora (somewhere) (Mon Aug 17 15:26:49 2026)
+
+A job has been run: 23905:say-hello - Succeeded
+```
+
 ## Troubleshooting
 
 If `exec` fails to create a run, it errored before it could create the run.
@@ -277,9 +377,22 @@ at startup; so just adding the migration file to that directory is enough.
 
 `go test ./...`
 
+## FAQ
 
-## Goals
+### Is this a replacement for cron?
+
+No, `troc` just wraps a regular shell command. It's best paired with cron
+but you can run it independently.
+
+### Will this run on Windows?
+
+Not sure. Feel free to try.
+
+### How can I communicate run information to another system?
+
+See [Custom Systems](#custom-systems) to execute arbitrary scripts after a run.
+
+## Future goals
 
 - TUI interface.
 - A local `troc` should be able to connect to a remote `troc` using SSH.
-- More notification options.

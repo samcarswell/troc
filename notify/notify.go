@@ -14,7 +14,6 @@ import (
 
 	"github.com/samcarswell/troc/config"
 	"github.com/samcarswell/troc/core"
-	"github.com/samcarswell/troc/data"
 )
 
 type slackPost struct {
@@ -27,14 +26,6 @@ type slackResp struct {
 	Error string `json:"error"`
 }
 
-type RunNotifyInfo struct {
-	Name             string
-	NotifyLogContent bool
-	Id               int64
-	Status           core.RunStatus
-	LogFile          string
-}
-
 const markdownBold = "*"
 const markdownPreformattedText = "```"
 const slackPostMessage = "https://slack.com/api/chat.postMessage"
@@ -42,7 +33,7 @@ const slackTagChannel = "<!channel>"
 
 func NotifyRun(
 	conf config.Config,
-	run data.GetRunRow,
+	run core.RunNotify,
 	logger *slog.Logger,
 ) (bool, error) {
 	switch conf.Notify.System {
@@ -129,8 +120,8 @@ func (dl notifyLogger) Write(p []byte) (n int, err error) {
 // This is designed to ignore incorrect inputs; ensuring a notification is sent
 // is critical; if it's missing some information, that's acceptable.
 func getNotifyTextSlack(
-	run data.GetRunRow,
-	tagStatuses config.StatusConfig,
+	run core.RunNotify,
+	tagStatuses core.StatusConfig,
 	hostname string,
 	showEmoji bool,
 ) string {
@@ -143,7 +134,7 @@ func getNotifyTextSlack(
 }
 
 func getNotifyTextNtfy(
-	run data.GetRunRow,
+	run core.RunNotify,
 	hostname string,
 	showEmoji bool,
 ) string {
@@ -181,7 +172,7 @@ func hostnameIfExists(hostname string) string {
 
 func tagChannelIfStatusConfigured(
 	status core.RunStatus,
-	tagStatuses config.StatusConfig,
+	tagStatuses core.StatusConfig,
 ) string {
 	if shouldNotifyBePriority(status, tagStatuses) {
 		return " " + slackTagChannel
@@ -191,7 +182,7 @@ func tagChannelIfStatusConfigured(
 
 func shouldNotifyBePriority(
 	status core.RunStatus,
-	statusConfig config.StatusConfig,
+	statusConfig core.StatusConfig,
 ) bool {
 	if (status == core.RunStatusRunning && statusConfig.Running) ||
 		(status == core.RunStatusSkipped && statusConfig.Skipped) ||
@@ -207,7 +198,7 @@ func notifyNfty(
 	conf config.NtfyConfig,
 	text string,
 	status core.RunStatus,
-	statusConfig config.StatusConfig,
+	statusConfig core.StatusConfig,
 ) (bool, error) {
 	if conf.Topic == "" {
 		return false, errors.New("notify.ntfy.topic must be set")
@@ -248,6 +239,9 @@ func notifySlack(slackConf config.SlackConfig, text string) (bool, error) {
 	}
 
 	r, err := http.NewRequest("POST", slackPostMessage, bytes.NewBuffer(postJson))
+	if err != nil {
+		return false, err
+	}
 	r.Header.Add("Authorization", "Bearer "+slackConf.Token)
 	r.Header.Add("Content-Type", "application/json")
 	r.Header.Add("charset", "utf-8")

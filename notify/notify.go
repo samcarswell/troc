@@ -17,30 +17,6 @@ import (
 	"github.com/samcarswell/troc/data"
 )
 
-type notifyMsgOpts struct {
-	BoldStart             string
-	BoldEnd               string
-	PreformattedTextStart string
-	PreformattedTextEnd   string
-	TagChannel            string
-}
-
-var MarkdownOpts = notifyMsgOpts{
-	BoldStart:             "*",
-	BoldEnd:               "*",
-	PreformattedTextStart: "```",
-	PreformattedTextEnd:   "```",
-	TagChannel:            " <!channel>",
-}
-
-var HtmlOpts = notifyMsgOpts{
-	BoldStart:             "<b>",
-	BoldEnd:               "</b>",
-	PreformattedTextStart: "<pre>",
-	PreformattedTextEnd:   "</pre>",
-	TagChannel:            "",
-}
-
 type slackPost struct {
 	Channel string `json:"channel"`
 	Text    string `json:"text"`
@@ -59,38 +35,29 @@ type RunNotifyInfo struct {
 	LogFile          string
 }
 
+const markdownBold = "*"
+const markdownPreformattedText = "```"
 const slackPostMessage = "https://slack.com/api/chat.postMessage"
+const slackTagChannel = "<!channel>"
 
 func NotifyRun(
 	conf config.Config,
 	run data.GetRunRow,
 	logger *slog.Logger,
 ) (bool, error) {
-	// TODO: I need to rethink how these message contents are generated
 	switch conf.Notify.System {
-	case "slack":
+	case config.ConfigNotifySystemSlack:
 		return notifySlack(conf.Notify.Slack, getNotifyTextSlack(
 			run,
 			conf.Notify.Status,
 			conf.Notify.Hostname,
 			conf.Display.Emoji,
-			MarkdownOpts,
 		))
-	// TODO: remove campfire
-	// case "campfire":
-	// 	return notifyCampfire(conf.Notify.Campfire, getNotifyTextSlack(
-	// 		run,
-	// 		conf.Notify.Status,
-	// 		conf.Notify.Hostname,
-	// 		conf.Display.Emoji,
-	// 		CampfireOpts,
-	// 	))
 	case config.ConfigNotifySystemNfty:
 		return notifyNfty(
 			conf.Notify.Ntfy,
 			getNotifyTextNtfy(
 				run,
-				MarkdownOpts,
 				conf.Notify.Hostname,
 				conf.Display.Emoji,
 			),
@@ -166,33 +133,30 @@ func getNotifyTextSlack(
 	tagStatuses config.StatusConfig,
 	hostname string,
 	showEmoji bool,
-	opts notifyMsgOpts,
 ) string {
 	status := core.RunStatus(run.Run.Status)
-	return opts.BoldStart + run.Job.Name + hostnameIfExists(hostname) + ":" +
-		strconv.FormatInt(run.Run.ID, 10) + opts.BoldEnd + " - " +
+	return markdownBold + run.Job.Name + hostnameIfExists(hostname) + ":" +
+		strconv.FormatInt(run.Run.ID, 10) + markdownBold + " - " +
 		core.FormatStatus(core.RunStatus(status), showEmoji) +
-		tagChannelIfStatusConfigured(status, tagStatuses, opts) +
-		logFileAndOutput(run.Job.NotifyLogContent, run.Run.LogFile, opts)
+		tagChannelIfStatusConfigured(status, tagStatuses) +
+		logFileAndOutput(run.Job.NotifyLogContent, run.Run.LogFile)
 }
 
 func getNotifyTextNtfy(
 	run data.GetRunRow,
-	opts notifyMsgOpts,
 	hostname string,
 	showEmoji bool,
 ) string {
 	status := core.RunStatus(run.Run.Status)
-	return opts.BoldStart + run.Job.Name + hostnameIfExists(hostname) + ":" +
-		strconv.FormatInt(run.Run.ID, 10) + opts.BoldEnd + " - " +
+	return markdownBold + run.Job.Name + hostnameIfExists(hostname) + ":" +
+		strconv.FormatInt(run.Run.ID, 10) + markdownBold + " - " +
 		core.FormatStatus(core.RunStatus(status), showEmoji) +
-		logFileAndOutput(run.Job.NotifyLogContent, run.Run.LogFile, opts)
+		logFileAndOutput(run.Job.NotifyLogContent, run.Run.LogFile)
 }
 
 func logFileAndOutput(
 	notifyLogContent bool,
 	logFile string,
-	opts notifyMsgOpts,
 ) string {
 	if !notifyLogContent {
 		return ""
@@ -205,7 +169,7 @@ func logFileAndOutput(
 		log.Printf("Unable to read logfile: %s. Notify message will omit it.", logFile)
 		return ""
 	}
-	return "\n" + opts.PreformattedTextStart + "\n" + string(logContent) + opts.PreformattedTextEnd
+	return "\n" + markdownPreformattedText + "\n" + string(logContent) + markdownPreformattedText
 }
 
 func hostnameIfExists(hostname string) string {
@@ -218,10 +182,9 @@ func hostnameIfExists(hostname string) string {
 func tagChannelIfStatusConfigured(
 	status core.RunStatus,
 	tagStatuses config.StatusConfig,
-	opts notifyMsgOpts,
 ) string {
 	if shouldNotifyBePriority(status, tagStatuses) {
-		return opts.TagChannel
+		return " " + slackTagChannel
 	}
 	return ""
 }
@@ -260,23 +223,6 @@ func notifyNfty(
 	} else {
 		r.Header.Set("Priority", "1")
 	}
-
-	client := &http.Client{}
-	res, err := client.Do(r)
-	if err != nil {
-		return false, err
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode < 200 || res.StatusCode > 299 {
-		return false, errors.New("failed to notity: " + res.Status)
-	}
-
-	return true, nil
-}
-
-func notifyCampfire(conf config.CampfireConfig, text string) (bool, error) {
-	r, _ := http.NewRequest("POST", conf.Domain+"/rooms/"+conf.RoomId+"/"+conf.Token+"/messages", strings.NewReader(text))
 
 	client := &http.Client{}
 	res, err := client.Do(r)

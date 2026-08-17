@@ -30,12 +30,10 @@ const ConfigDatabasePath = "database"
 const ConfigLogDir = "logdir"
 
 const ConfigNotifySystemSlack = "slack"
-const ConfigNotifySystemCampfire = "campfire"
 const ConfigNotifySystemNfty = "ntfy"
 
 var reservedNotifySystems = []string{
 	ConfigNotifySystemSlack,
-	ConfigNotifySystemCampfire,
 	ConfigNotifySystemNfty,
 }
 
@@ -208,7 +206,6 @@ type CustomNotifySystemConfigItem struct {
 type NotifyConfig struct {
 	Hostname string
 	Slack    SlackConfig
-	Campfire CampfireConfig
 	Ntfy     NtfyConfig
 	Status   StatusConfig
 	System   string
@@ -218,12 +215,6 @@ type NotifyConfig struct {
 type SlackConfig struct {
 	Token   string
 	Channel string
-}
-
-type CampfireConfig struct {
-	Token  string
-	RoomId string
-	Domain string
 }
 
 type NtfyConfig struct {
@@ -285,11 +276,6 @@ func setAndValidateConfig() error {
 				Token:   viper.GetString("notify.slack.token"),
 				Channel: viper.GetString("notify.slack.channel"),
 			},
-			Campfire: CampfireConfig{
-				Token:  viper.GetString("notify.campfire.token"),
-				RoomId: viper.GetString("notify.campfire.roomid"),
-				Domain: viper.GetString("notify.campfire.domain"),
-			},
 			Ntfy: NtfyConfig{
 				Topic:  viper.GetString("notify.ntfy.topic"),
 				Domain: viper.GetString("notify.ntfy.domain"),
@@ -302,7 +288,6 @@ func setAndValidateConfig() error {
 				Skipped:    viper.GetBool("notify.status.skipped"),
 				Terminated: viper.GetBool("notify.status.terminated"),
 			},
-			Custom: *customNotifyConfs,
 		},
 		Display: DisplayConfig{
 			Emoji: viper.GetBool("display.emoji"),
@@ -316,6 +301,9 @@ func setAndValidateConfig() error {
 				},
 			},
 		},
+	}
+	if customNotifyConfs != nil {
+		conf.Notify.Custom = *customNotifyConfs
 	}
 	var customNotifySystems = map[string]string{}
 	errs := []error{}

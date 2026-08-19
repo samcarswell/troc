@@ -43,12 +43,6 @@ var execCmd = &cobra.Command{
 		notifyOpt := opts.GetBoolOptOrExit(cmd, notifyOpt)
 		conf := config.GetConfig()
 		queries := config.GetDatabase(cmd.Context())
-		if notifyOpt && conf.Notify.Slack.Token == "" {
-			core.LogErrorAndExit(logger, errors.New("notify is set but notify.slack.token is blank"))
-		}
-		if notifyOpt && conf.Notify.Slack.Channel == "" {
-			core.LogErrorAndExit(logger, errors.New("notify is set but notify.slack.channel is blank"))
-		}
 
 		logFile := config.GetLogFileOrExit(logger, cmd.Context())
 

@@ -35,6 +35,13 @@ var addCmd = &cobra.Command{
 		}
 
 		logger.Info("Job created with ID " + strconv.FormatInt(newJobId, 10) + " and name " + jobName)
+
+		data := core.JobShow{
+			ID:               newJobId,
+			Name:             jobName,
+			NotifyLogContent: notifyLog,
+		}
+		core.PrintJson(data)
 	},
 }
 

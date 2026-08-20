@@ -3,7 +3,6 @@ package test
 import (
 	"bytes"
 	"encoding/json"
-	"log"
 	"os"
 	"os/exec"
 	"path"
@@ -39,12 +38,11 @@ type TrocCmd struct {
 }
 
 func (c TrocCmd) ParseRun(t *testing.T) core.RunShow {
-	var runInfo core.RunShow
-	err := json.Unmarshal(c.Stdout.Bytes(), &runInfo)
-	if err != nil {
-		t.Fatalf("%s", err.Error())
-	}
-	return runInfo
+	return CmdConv[core.RunShow](t, c)
+}
+
+func (c TrocCmd) ParseJob(t *testing.T) core.JobShow {
+	return CmdConv[core.JobShow](t, c)
 }
 
 // Creates CLI with new database/config. Should only be called once per tests.
@@ -71,6 +69,10 @@ func (t TrocJob) Add(name string, notifyLog bool) TrocCmd {
 		args = append(args, "--notify-log")
 	}
 	return getCmd(t.Exe, args)
+}
+
+func (t TrocJob) List() TrocCmd {
+	return getCmd(t.Exe, []string{"job", "list", "-f", "json"})
 }
 
 func (t TrocRun) List() TrocCmd {
@@ -114,11 +116,11 @@ func getCmd(exe string, args []string) TrocCmd {
 	}
 }
 
-func CmdConv[T any](t TrocCmd) T {
+func CmdConv[T any](t *testing.T, cmd TrocCmd) T {
 	var val T
-	err := json.Unmarshal(t.Stdout.Bytes(), &val)
+	err := json.Unmarshal(cmd.Stdout.Bytes(), &val)
 	if err != nil {
-		panic(err)
+		t.Fatalf("%s", err.Error())
 	}
 	return val
 }
@@ -126,8 +128,6 @@ func CmdConv[T any](t TrocCmd) T {
 func (t TrocCmd) Run() {
 	err := t.Cmd.Run()
 	if err != nil {
-		log.Fatalln(string(t.Stderr.Bytes()[:]))
-		log.Fatalln(err)
 		panic(err)
 	}
 }
@@ -156,10 +156,10 @@ func (t TrocCmd) Wait() {
 // 	}
 // }
 
-func (t TrocCmd) ExecLogOrFail() Log {
-	log, err := NewLogFromBuffer(*t.Stderr)
+func (cmd TrocCmd) ExecLogOrFail(t *testing.T) Log {
+	log, err := NewLogFromBuffer(*cmd.Stderr)
 	if err != nil {
-		panic(err)
+		t.Fatal(err)
 	}
 	return log
 }
@@ -168,17 +168,10 @@ func SetupEnv(t *testing.T) {
 	confDir, _ := os.MkdirTemp(os.TempDir(), "config")
 	logDir := t.TempDir()
 	lockDir := t.TempDir()
-	setenv("TROC_CONFIG_PATH", confDir)
-	setenv("TROC_DATABASE", path.Join(confDir, "troc.db"))
-	setenv("TROC_LOGDIR", logDir)
-	setenv("TROC_LOCKDIR", lockDir)
-	setenv("TROC_LOGJSON", "true")
+	t.Setenv("TROC_CONFIG_PATH", confDir)
+	t.Setenv("TROC_DATABASE", path.Join(confDir, "troc.db"))
+	t.Setenv("TROC_LOGDIR", logDir)
+	t.Setenv("TROC_LOCKDIR", lockDir)
+	t.Setenv("TROC_LOGJSON", "true")
 	t.Logf("Config directory: %s", confDir)
-}
-
-func setenv(key string, value string) {
-	err := os.Setenv(key, value)
-	if err != nil {
-		panic(err)
-	}
 }

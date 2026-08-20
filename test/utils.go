@@ -121,7 +121,7 @@ func PollUntilEventOrFail(
 	timeout := 5000
 	delay := 10
 	for i := 0; i < timeout/delay; i++ {
-		log := cmd.ExecLogOrFail()
+		log := cmd.ExecLogOrFail(t)
 		for _, row := range log.Rows {
 			if row.Event == string(event) {
 				return &row

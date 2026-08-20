@@ -113,6 +113,26 @@ func AssertFileContents(t *testing.T, expected string, path string) {
 	assert.Equal(t, expected, string(file))
 }
 
+func PollUntilEventOrFail(
+	t *testing.T,
+	cmd TrocCmd,
+	event core.Event,
+) *logRow {
+	timeout := 5000
+	delay := 10
+	for i := 0; i < timeout/delay; i++ {
+		log := cmd.ExecLogOrFail()
+		for _, row := range log.Rows {
+			if row.Event == string(event) {
+				return &row
+			}
+		}
+		time.Sleep(time.Millisecond * time.Duration(delay))
+	}
+	t.Fatalf("%s", "could not find event "+string(event))
+	return nil
+}
+
 func GetEventOrFail(t *testing.T, event core.Event, log Log) *logRow {
 	for _, row := range log.Rows {
 		if row.Event == string(event) {

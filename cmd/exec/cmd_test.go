@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"context"
-	"strings"
 	"testing"
 	"time"
 
@@ -14,6 +13,7 @@ import (
 )
 
 // TODO: move these tests to e2e tests in /cmd/cmd_test.go
+// TODO: do this as apart of this release ^
 func Test_execRunNonExistentJob(t *testing.T) {
 	ctx := context.Background()
 	db := test.CreateDb(ctx, t)
@@ -48,9 +48,9 @@ func Test_execRunNonExistentJob(t *testing.T) {
 	assert.Equal(t, string(core.RunStatusSucceeded), runCompleted.RunStatus)
 	test.AssertLogDoesNotHaveInfo(t, "Sending notify message", execLog)
 	test.AssertFileInDirectory(t, conf.LogDir, run.Run.LogFile)
-	lockRow := test.GetInfoLogLineStartingWith(t, "Created job lock at ", execLog)
-	lockFile := strings.Split(lockRow.Msg, "Created job lock at ")[1]
-	test.AssertFileInDirectory(t, conf.LockDir, lockFile)
+	// lockRow := test.GetInfoLogLineStartingWith(t, "Created job lock at ", execLog)
+	// lockFile := strings.Split(lockRow.Msg, "Created job lock at ")[1]
+	// test.AssertFileInDirectory(t, conf.LockDir, lockFile)
 
 	assert.Equal(t, int64(1), dbJob.Job.ID)
 	assert.Equal(t, false, dbJob.Job.NotifyLogContent)

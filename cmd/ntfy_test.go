@@ -3,7 +3,6 @@ package cmd
 import (
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/samcarswell/troc/core"
@@ -93,10 +92,7 @@ func Test_NotifySkipped(t *testing.T) {
 		t.Setenv("TROC_NOTIFY_STATUS_SKIPPED", strconv.FormatBool(d.notifyStatusSkipped))
 		exec1 := cli.Base.ExecNotify(jobName, "sleep 2; echo done")
 		exec1.Start()
-		time.Sleep(50 * time.Millisecond) // TODO: need a polll for a run
-
-		log := exec1.ExecLogOrFail()
-		runStartedEvent := test.GetEventOrFail(t, core.EventRunStarted, log)
+		runStartedEvent := test.PollUntilEventOrFail(t, exec1, core.EventRunStarted)
 
 		exec2 := cli.Base.ExecNotify(jobName, "echo done")
 		exec2.Run()
@@ -134,9 +130,7 @@ func Test_NotifyTerminated(t *testing.T) {
 		t.Setenv("TROC_NOTIFY_STATUS_TERMINATED", strconv.FormatBool(d.notifyStatusTerminated))
 		exec := cli.Base.ExecNotify(jobName, "sleep 60; echo hello")
 		exec.Start()
-		time.Sleep(50 * time.Millisecond) // TODO: need a polll for a run
-		log := exec.ExecLogOrFail()
-		runStartedEvent := test.GetEventOrFail(t, core.EventRunStarted, log)
+		runStartedEvent := test.PollUntilEventOrFail(t, exec, core.EventRunStarted)
 
 		cli.Base.Run.Kill(runStartedEvent.RunId).Run()
 		exec.Wait()

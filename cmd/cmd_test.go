@@ -12,7 +12,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/samcarswell/troc/core"
 	"github.com/samcarswell/troc/test"
@@ -181,23 +180,14 @@ func Test_Kill(t *testing.T) {
 	killedRunCmd := cli.Base.Exec("first-job", "echo 'Started'; sleep 60; echo 'Finished'")
 	killedRunCmd.Start()
 
-	time.Sleep(10 * time.Millisecond)
-
-	logRunning := killedRunCmd.ExecLogOrFail()
-	runStartedEvent := test.GetEventOrFail(t, core.EventRunStarted, logRunning)
+	runStartedEvent := test.PollUntilEventOrFail(t, killedRunCmd, core.EventRunStarted)
 	killRun := cli.Base.Run.Kill(runStartedEvent.RunId)
 	killRun.Run()
 
-	runKill := killRun.ExecLogOrFail()
-	time.Sleep(10 * time.Millisecond)
-	sigtermEvent := test.GetEventOrFail(t, core.EventRunSigterm, runKill)
+	sigtermEvent := test.PollUntilEventOrFail(t, killRun, core.EventRunSigterm)
 	assert.Equal(t, runStartedEvent.RunPid, sigtermEvent.RunPid)
 
-	time.Sleep(10 * time.Millisecond)
-
-	logKilled := killedRunCmd.ExecLogOrFail()
-	time.Sleep(10 * time.Millisecond)
-	terminatedEvent := test.GetEventOrFail(t, core.EventRunTerminated, logKilled)
+	terminatedEvent := test.PollUntilEventOrFail(t, killedRunCmd, core.EventRunTerminated)
 	assert.Equal(t, runStartedEvent.RunId, terminatedEvent.RunId)
 	assert.Equal(t, runStartedEvent.JobName, terminatedEvent.JobName)
 

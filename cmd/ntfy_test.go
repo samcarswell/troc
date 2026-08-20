@@ -83,17 +83,17 @@ func Test_NotifySkipped(t *testing.T) {
 	t.Setenv("TROC_NOTIFY_NTFY_TOKEN", ins.NtfyToken)
 	t.Setenv("TROC_NOTIFY_NTFY_DOMAIN", ins.NtfyUri)
 	cli := test.NewTrocCli(t, ins.TrocExe)
-	// cli.Base.Run.List().Run() // This ensures the intiial configuration has been made
 	for _, d := range testData {
 		topic := uuid.New().String()
 		hostname := uuid.New().String()
 		jobName := uuid.New().String()
+		cli.Base.Job.Add(jobName, false).Run()
 		t.Setenv("TROC_NOTIFY_NTFY_TOPIC", topic)
 		t.Setenv("TROC_NOTIFY_HOSTNAME", hostname)
 		t.Setenv("TROC_NOTIFY_STATUS_SKIPPED", strconv.FormatBool(d.notifyStatusSkipped))
 		exec1 := cli.Base.ExecNotify(jobName, "sleep 2; echo done")
 		exec1.Start()
-		time.Sleep(1 * time.Second)
+		time.Sleep(50 * time.Millisecond) // TODO: need a polll for a run
 
 		log := exec1.ExecLogOrFail()
 		runStartedEvent := test.GetEventOrFail(t, core.EventRunStarted, log)
@@ -123,17 +123,18 @@ func Test_NotifyTerminated(t *testing.T) {
 	t.Setenv("TROC_NOTIFY_SYSTEM", "ntfy")
 	t.Setenv("TROC_NOTIFY_NTFY_TOKEN", ins.NtfyToken)
 	t.Setenv("TROC_NOTIFY_NTFY_DOMAIN", ins.NtfyUri)
-	jobName := uuid.New().String()
 	cli := test.NewTrocCli(t, ins.TrocExe)
 	for _, d := range testData {
 		topic := uuid.New().String()
 		hostname := uuid.New().String()
+		jobName := uuid.New().String()
+		cli.Base.Job.Add(jobName, false).Run()
 		t.Setenv("TROC_NOTIFY_NTFY_TOPIC", topic)
 		t.Setenv("TROC_NOTIFY_HOSTNAME", hostname)
 		t.Setenv("TROC_NOTIFY_STATUS_TERMINATED", strconv.FormatBool(d.notifyStatusTerminated))
 		exec := cli.Base.ExecNotify(jobName, "sleep 60; echo hello")
 		exec.Start()
-		time.Sleep(1 + time.Second)
+		time.Sleep(50 * time.Millisecond) // TODO: need a polll for a run
 		log := exec.ExecLogOrFail()
 		runStartedEvent := test.GetEventOrFail(t, core.EventRunStarted, log)
 

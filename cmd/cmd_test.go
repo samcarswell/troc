@@ -48,8 +48,9 @@ func ntfyInstance() (testcontainers.Container, error) {
 			Image:        "binwiederhier/ntfy:v2.27",
 			ExposedPorts: []string{"80/tcp"},
 			Env: map[string]string{
-				"NTFY_PASSWORD":     "password",
-				"NTFY_PASSWORD_HAS": "$2a$13$QIItyPfXilSD5k2NHj58uOqM6vFYbiMztb5IwqKnFMISBZopIzfX.",
+				"NTFY_PASSWORD":                    "password",
+				"NTFY_PASSWORD_HAS":                "$2a$13$QIItyPfXilSD5k2NHj58uOqM6vFYbiMztb5IwqKnFMISBZopIzfX.",
+				"NTFY_VISITOR_REQUEST_LIMIT_BURST": "20000",
 			},
 			Cmd: []string{
 				"serve",

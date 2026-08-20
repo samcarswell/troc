@@ -3,7 +3,6 @@ package test
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -14,6 +13,10 @@ import (
 	"github.com/samcarswell/troc/core"
 )
 
+type TrocJob struct {
+	Exe string
+}
+
 type TrocRun struct {
 	Exe string
 }
@@ -21,6 +24,7 @@ type TrocRun struct {
 type TrocBase struct {
 	Exe string
 	Run TrocRun
+	Job TrocJob
 }
 
 type TrocCli struct {
@@ -52,10 +56,21 @@ func NewTrocCli(t *testing.T, exe string) *TrocCli {
 			Run: TrocRun{
 				Exe: exe,
 			},
+			Job: TrocJob{
+				Exe: exe,
+			},
 		},
 	}
 	SetupEnv(t)
 	return &tc
+}
+
+func (t TrocJob) Add(name string, notifyLog bool) TrocCmd {
+	args := []string{"job", "add", "--name", name}
+	if notifyLog {
+		args = append(args, "--notify-log")
+	}
+	return getCmd(t.Exe, args)
 }
 
 func (t TrocRun) List() TrocCmd {
@@ -150,7 +165,7 @@ func (t TrocCmd) ExecLogOrFail() Log {
 }
 
 func SetupEnv(t *testing.T) {
-	confDir := t.TempDir()
+	confDir, _ := os.MkdirTemp(os.TempDir(), "config")
 	logDir := t.TempDir()
 	lockDir := t.TempDir()
 	setenv("TROC_CONFIG_PATH", confDir)
@@ -158,6 +173,7 @@ func SetupEnv(t *testing.T) {
 	setenv("TROC_LOGDIR", logDir)
 	setenv("TROC_LOCKDIR", lockDir)
 	setenv("TROC_LOGJSON", "true")
+	t.Logf("Config directory: %s", confDir)
 }
 
 func setenv(key string, value string) {

@@ -3,11 +3,15 @@ package test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"path"
 	"strconv"
 	"testing"
+
+	"github.com/samcarswell/troc/core"
 )
 
 type TrocRun struct {
@@ -28,6 +32,15 @@ type TrocCmd struct {
 	Cmd    *exec.Cmd
 	Stdout *bytes.Buffer
 	Stderr *bytes.Buffer
+}
+
+func (c TrocCmd) ParseRun(t *testing.T) core.RunShow {
+	var runInfo core.RunShow
+	err := json.Unmarshal(c.Stdout.Bytes(), &runInfo)
+	if err != nil {
+		t.Fatalf("%s", err.Error())
+	}
+	return runInfo
 }
 
 // Creates CLI with new database/config. Should only be called once per tests.
@@ -65,6 +78,10 @@ func (t TrocBase) Exec(name string, script string) TrocCmd {
 	return getCmd(t.Exe, []string{"exec", "--name", name, script})
 }
 
+func (t TrocBase) ExecNotify(name string, script string) TrocCmd {
+	return getCmd(t.Exe, []string{"exec", "--notify", "--name", name, script})
+}
+
 func (t TrocBase) Version() TrocCmd {
 	return getCmd(t.Exe, []string{"--version"})
 }
@@ -94,6 +111,8 @@ func CmdConv[T any](t TrocCmd) T {
 func (t TrocCmd) Run() {
 	err := t.Cmd.Run()
 	if err != nil {
+		log.Fatalln(string(t.Stderr.Bytes()[:]))
+		log.Fatalln(err)
 		panic(err)
 	}
 }
@@ -111,6 +130,16 @@ func (t TrocCmd) Wait() {
 		panic(err)
 	}
 }
+
+// TODO: remove this. We should be using troc to handle this. Even though this
+// Should work. Probably need a separate test to ensure that a sigterm from troc
+// flows through to the child process
+// func (t TrocCmd) Term() {
+// 	err := t.Cmd.Process.Signal(syscall.SIGINT)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// }
 
 func (t TrocCmd) ExecLogOrFail() Log {
 	log, err := NewLogFromBuffer(*t.Stderr)

@@ -1,7 +1,10 @@
 package cmd
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
+	"io"
 	"log"
 	"os"
 	"os/exec"
@@ -14,11 +17,101 @@ import (
 	"github.com/samcarswell/troc/core"
 	"github.com/samcarswell/troc/test"
 	"github.com/stretchr/testify/assert"
+	"github.com/testcontainers/testcontainers-go"
+	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 var dir string
 
 var trocExe string
+var ntfyToken string
+var ntfyUri string
+
+type E2eInstance struct {
+	TrocExe   string
+	NtfyToken string
+	NtfyUri   string
+}
+
+func GetInstance() E2eInstance {
+	return E2eInstance{
+		TrocExe:   trocExe,
+		NtfyToken: ntfyToken,
+		NtfyUri:   ntfyUri,
+	}
+}
+
+func ntfyInstance() (testcontainers.Container, error) {
+	ctx := context.Background()
+	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: testcontainers.ContainerRequest{
+			Image:        "binwiederhier/ntfy:v2.27",
+			ExposedPorts: []string{"80/tcp"},
+			Env: map[string]string{
+				"NTFY_PASSWORD":     "password",
+				"NTFY_PASSWORD_HAS": "$2a$13$QIItyPfXilSD5k2NHj58uOqM6vFYbiMztb5IwqKnFMISBZopIzfX.",
+			},
+			Cmd: []string{
+				"serve",
+			},
+			WaitingFor: wait.ForListeningPort("80/tcp"),
+		},
+		Started:      true,
+		ProviderType: 0,
+		Logger:       nil,
+		Reuse:        false,
+	})
+	if err != nil {
+		return nil, err
+	}
+	err = container.Start(ctx)
+	if err != nil {
+		return nil, err
+	}
+	c, reader, err := container.Exec(ctx, []string{
+		"/bin/sh",
+		"-c",
+		"/bin/mkdir /etc/ntfy && echo 'auth-file: \"/var/lib/ntfy/user.db\"' > /etc/ntfy/server.yml && echo 'auth-default-access: \"deny-all\"' >> /etc/ntfy/server.yml && /bin/mkdir /var/lib/ntfy && /bin/touch /var/lib/ntfy/user.db && ntfy user add --role=admin test",
+	})
+	if err != nil {
+		return nil, err
+	}
+	buf := new(strings.Builder)
+	_, err = io.Copy(buf, reader)
+	if err != nil {
+		return nil, err
+	}
+	if c != 0 {
+		return nil, errors.New("exec returned non-zero exit code")
+	}
+
+	c, reader, err = container.Exec(ctx, []string{
+		"ntfy",
+		"token",
+		"add",
+		"test",
+	})
+	if err != nil {
+		return nil, err
+	}
+	buf = new(strings.Builder)
+	_, err = io.Copy(buf, reader)
+	if err != nil {
+		return nil, err
+	}
+	if c != 0 {
+		return nil, errors.New("exec returned non-zero exit code")
+	}
+	ntfyToken = strings.Split(buf.String(), " ")[1]
+
+	ntfyUri, err = container.PortEndpoint(ctx, "80", "http")
+	if err != nil {
+		return nil, err
+	}
+
+	return container, nil
+
+}
 
 func TestMain(m *testing.M) {
 	pwd, err := os.Getwd()
@@ -38,7 +131,14 @@ func TestMain(m *testing.M) {
 	}
 	trocExe = path.Join(dir, "troc")
 	defer os.RemoveAll(dir)
+
+	cont, err := ntfyInstance()
+	if err != nil {
+		panic(err)
+	}
+
 	exitVal := m.Run()
+	cont.Terminate(context.Background())
 	os.Exit(exitVal)
 }
 

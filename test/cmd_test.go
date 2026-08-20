@@ -1,4 +1,4 @@
-package cmd
+package test
 
 import (
 	"context"
@@ -14,7 +14,6 @@ import (
 	"testing"
 
 	"github.com/samcarswell/troc/core"
-	"github.com/samcarswell/troc/test"
 	"github.com/stretchr/testify/assert"
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/wait"
@@ -143,7 +142,7 @@ func TestMain(m *testing.M) {
 }
 
 func Test_Version(t *testing.T) {
-	cli := test.NewTrocCli(t, trocExe)
+	cli := NewTrocCli(t, trocExe)
 	cmd := cli.Base.Version()
 	cmd.Run()
 
@@ -154,7 +153,7 @@ func Test_Version(t *testing.T) {
 }
 
 func Test_FirstRunDefaultSettings(t *testing.T) {
-	cli := test.NewTrocCli(t, trocExe)
+	cli := NewTrocCli(t, trocExe)
 	exec := cli.Base.Exec("first-job", "echo 'Hello!'")
 	exec.Run()
 
@@ -165,7 +164,7 @@ func Test_FirstRunDefaultSettings(t *testing.T) {
 	}
 	assert.FileExists(t, runInfo.LogFile)
 	assert.FileExists(t, runInfo.SystemLogFile)
-	test.AssertFileContents(t, "Hello!\n", runInfo.LogFile)
+	AssertFileContents(t, "Hello!\n", runInfo.LogFile)
 	assert.Equal(t, int64(1), runInfo.ID)
 	assert.Equal(t, "first-job", runInfo.JobName)
 	assert.Equal(t, string(core.RunStatusSucceeded), runInfo.Status)
@@ -176,24 +175,24 @@ func Test_FirstRunDefaultSettings(t *testing.T) {
 }
 
 func Test_Kill(t *testing.T) {
-	cli := test.NewTrocCli(t, trocExe)
+	cli := NewTrocCli(t, trocExe)
 	killedRunCmd := cli.Base.Exec("first-job", "echo 'Started'; sleep 60; echo 'Finished'")
 	killedRunCmd.Start()
 
-	runStartedEvent := test.PollUntilEventOrFail(t, killedRunCmd, core.EventRunStarted)
+	runStartedEvent := PollUntilEventOrFail(t, killedRunCmd, core.EventRunStarted)
 	killRun := cli.Base.Run.Kill(runStartedEvent.RunId)
 	killRun.Run()
 
-	sigtermEvent := test.PollUntilEventOrFail(t, killRun, core.EventRunSigterm)
+	sigtermEvent := PollUntilEventOrFail(t, killRun, core.EventRunSigterm)
 	assert.Equal(t, runStartedEvent.RunPid, sigtermEvent.RunPid)
 
-	terminatedEvent := test.PollUntilEventOrFail(t, killedRunCmd, core.EventRunTerminated)
+	terminatedEvent := PollUntilEventOrFail(t, killedRunCmd, core.EventRunTerminated)
 	assert.Equal(t, runStartedEvent.RunId, terminatedEvent.RunId)
 	assert.Equal(t, runStartedEvent.JobName, terminatedEvent.JobName)
 
 	runCmd := cli.Base.Run.List()
 	runCmd.Run()
-	run := test.CmdConv[[]core.RunShow](runCmd)[0]
+	run := CmdConv[[]core.RunShow](runCmd)[0]
 	assert.Equal(t, string(core.RunStatusTerminated), run.Status)
 }
 
@@ -202,7 +201,7 @@ func Test_ParentEnvAccessibleToRun(t *testing.T) {
 	if err != nil {
 		panic(err)
 	}
-	cli := test.NewTrocCli(t, trocExe)
+	cli := NewTrocCli(t, trocExe)
 	exec := cli.Base.Exec("test-env", "echo $TEST_ENVVAR")
 	exec.Run()
 
@@ -213,11 +212,11 @@ func Test_ParentEnvAccessibleToRun(t *testing.T) {
 	}
 	assert.FileExists(t, runInfo.LogFile)
 	assert.FileExists(t, runInfo.SystemLogFile)
-	test.AssertFileContents(t, "test-value\n", runInfo.LogFile)
+	AssertFileContents(t, "test-value\n", runInfo.LogFile)
 }
 
 func Test_ArchiveRun(t *testing.T) {
-	cli := test.NewTrocCli(t, trocExe)
+	cli := NewTrocCli(t, trocExe)
 	exec := cli.Base.Exec("test-env", "echo 'working'")
 	exec.Run()
 	var runInfo core.RunShow
@@ -230,7 +229,7 @@ func Test_ArchiveRun(t *testing.T) {
 
 	runCmd := cli.Base.Run.List()
 	runCmd.Run()
-	runs := test.CmdConv[[]core.RunShow](runCmd)
+	runs := CmdConv[[]core.RunShow](runCmd)
 	var run1 core.RunShow
 	for _, r := range runs {
 		if r.ID == runInfo.ID {
@@ -244,11 +243,11 @@ func Test_ArchiveRun(t *testing.T) {
 	archiveCmd.Run()
 
 	log := archiveCmd.ExecLogOrFail()
-	test.AssertLogHasInfo(t, "Run "+strconv.Itoa(int(runInfo.ID))+" successfully archived.", log)
+	AssertLogHasInfo(t, "Run "+strconv.Itoa(int(runInfo.ID))+" successfully archived.", log)
 
 	runCmd2 := cli.Base.Run.List()
 	runCmd2.Run()
-	runs2 := test.CmdConv[[]core.RunShow](runCmd2)
+	runs2 := CmdConv[[]core.RunShow](runCmd2)
 	var run2 core.RunShow
 	for _, r := range runs2 {
 		if r.ID == runInfo.ID {
@@ -260,7 +259,7 @@ func Test_ArchiveRun(t *testing.T) {
 
 	runCmd3 := cli.Base.Run.ListArchived()
 	runCmd3.Run()
-	runs3 := test.CmdConv[[]core.RunShow](runCmd3)
+	runs3 := CmdConv[[]core.RunShow](runCmd3)
 	var run3 core.RunShow
 	for _, r := range runs3 {
 		if r.ID == runInfo.ID {

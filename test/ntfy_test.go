@@ -1,4 +1,4 @@
-package cmd
+package test
 
 import (
 	"strconv"
@@ -6,7 +6,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/samcarswell/troc/core"
-	"github.com/samcarswell/troc/test"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -24,7 +23,7 @@ func Test_NotifyFailure(t *testing.T) {
 	t.Setenv("TROC_NOTIFY_NTFY_DOMAIN", ins.NtfyUri)
 	jobName := uuid.New().String()
 	randomFile := uuid.New().String() + ".file"
-	cli := test.NewTrocCli(t, ins.TrocExe)
+	cli := NewTrocCli(t, ins.TrocExe)
 	for _, d := range testData {
 		topic := uuid.New().String()
 		hostname := uuid.New().String()
@@ -34,7 +33,7 @@ func Test_NotifyFailure(t *testing.T) {
 		exec := cli.Base.ExecNotify(jobName, "cat "+randomFile)
 		exec.Run()
 		runInfo := exec.ParseRun(t)
-		msg := test.NtfyPollMsgs(topic, ins.NtfyToken, ins.NtfyUri)[0]
+		msg := NtfyPollMsgs(topic, ins.NtfyToken, ins.NtfyUri)[0]
 		assert.Equal(t, "*"+jobName+"@"+hostname+":"+strconv.FormatInt(runInfo.ID, 10)+"* - ❌ Failed", msg.Message)
 		assert.Equal(t, d.ntfyPriority, msg.Priority)
 	}
@@ -53,7 +52,7 @@ func Test_NotifySucceeded(t *testing.T) {
 	t.Setenv("TROC_NOTIFY_NTFY_TOKEN", ins.NtfyToken)
 	t.Setenv("TROC_NOTIFY_NTFY_DOMAIN", ins.NtfyUri)
 	jobName := uuid.New().String()
-	cli := test.NewTrocCli(t, ins.TrocExe)
+	cli := NewTrocCli(t, ins.TrocExe)
 	for _, d := range testData {
 		topic := uuid.New().String()
 		hostname := uuid.New().String()
@@ -63,7 +62,7 @@ func Test_NotifySucceeded(t *testing.T) {
 		exec := cli.Base.ExecNotify(jobName, "echo hello")
 		exec.Run()
 		runInfo := exec.ParseRun(t)
-		msg := test.NtfyPollMsgs(topic, ins.NtfyToken, ins.NtfyUri)[0]
+		msg := NtfyPollMsgs(topic, ins.NtfyToken, ins.NtfyUri)[0]
 		assert.Equal(t, "*"+jobName+"@"+hostname+":"+strconv.FormatInt(runInfo.ID, 10)+"* - ✅ Succeeded", msg.Message)
 		assert.Equal(t, d.ntfyPriority, msg.Priority)
 	}
@@ -81,7 +80,7 @@ func Test_NotifySkipped(t *testing.T) {
 	t.Setenv("TROC_NOTIFY_SYSTEM", "ntfy")
 	t.Setenv("TROC_NOTIFY_NTFY_TOKEN", ins.NtfyToken)
 	t.Setenv("TROC_NOTIFY_NTFY_DOMAIN", ins.NtfyUri)
-	cli := test.NewTrocCli(t, ins.TrocExe)
+	cli := NewTrocCli(t, ins.TrocExe)
 	for _, d := range testData {
 		topic := uuid.New().String()
 		hostname := uuid.New().String()
@@ -92,12 +91,12 @@ func Test_NotifySkipped(t *testing.T) {
 		t.Setenv("TROC_NOTIFY_STATUS_SKIPPED", strconv.FormatBool(d.notifyStatusSkipped))
 		exec1 := cli.Base.ExecNotify(jobName, "sleep 2; echo done")
 		exec1.Start()
-		runStartedEvent := test.PollUntilEventOrFail(t, exec1, core.EventRunStarted)
+		runStartedEvent := PollUntilEventOrFail(t, exec1, core.EventRunStarted)
 
 		exec2 := cli.Base.ExecNotify(jobName, "echo done")
 		exec2.Run()
 		runinfo := exec2.ParseRun(t)
-		msgs := test.NtfyPollMsgs(topic, ins.NtfyToken, ins.NtfyUri)
+		msgs := NtfyPollMsgs(topic, ins.NtfyToken, ins.NtfyUri)
 		assert.Equal(t, 1, len(msgs))
 		msg := msgs[0]
 		assert.Equal(t, "*"+jobName+"@"+hostname+":"+strconv.FormatInt(runinfo.ID, 10)+"* - ⚠️ Skipped", msg.Message)
@@ -119,7 +118,7 @@ func Test_NotifyTerminated(t *testing.T) {
 	t.Setenv("TROC_NOTIFY_SYSTEM", "ntfy")
 	t.Setenv("TROC_NOTIFY_NTFY_TOKEN", ins.NtfyToken)
 	t.Setenv("TROC_NOTIFY_NTFY_DOMAIN", ins.NtfyUri)
-	cli := test.NewTrocCli(t, ins.TrocExe)
+	cli := NewTrocCli(t, ins.TrocExe)
 	for _, d := range testData {
 		topic := uuid.New().String()
 		hostname := uuid.New().String()
@@ -130,13 +129,13 @@ func Test_NotifyTerminated(t *testing.T) {
 		t.Setenv("TROC_NOTIFY_STATUS_TERMINATED", strconv.FormatBool(d.notifyStatusTerminated))
 		exec := cli.Base.ExecNotify(jobName, "sleep 60; echo hello")
 		exec.Start()
-		runStartedEvent := test.PollUntilEventOrFail(t, exec, core.EventRunStarted)
+		runStartedEvent := PollUntilEventOrFail(t, exec, core.EventRunStarted)
 
 		cli.Base.Run.Kill(runStartedEvent.RunId).Run()
 		exec.Wait()
 
 		runInfo := exec.ParseRun(t)
-		msg := test.NtfyPollMsgs(topic, ins.NtfyToken, ins.NtfyUri)[0]
+		msg := NtfyPollMsgs(topic, ins.NtfyToken, ins.NtfyUri)[0]
 		assert.Equal(t, "*"+jobName+"@"+hostname+":"+strconv.FormatInt(runInfo.ID, 10)+"* - 💥 Terminated", msg.Message)
 		assert.Equal(t, d.ntfyPriority, msg.Priority)
 	}
@@ -155,7 +154,7 @@ func Test_NotifyEmoji(t *testing.T) {
 	t.Setenv("TROC_NOTIFY_NTFY_TOKEN", ins.NtfyToken)
 	t.Setenv("TROC_NOTIFY_NTFY_DOMAIN", ins.NtfyUri)
 	jobName := uuid.New().String()
-	cli := test.NewTrocCli(t, ins.TrocExe)
+	cli := NewTrocCli(t, ins.TrocExe)
 	for _, d := range testData {
 		topic := uuid.New().String()
 		hostname := uuid.New().String()
@@ -165,7 +164,7 @@ func Test_NotifyEmoji(t *testing.T) {
 		exec := cli.Base.ExecNotify(jobName, "echo hello")
 		exec.Run()
 		runInfo := exec.ParseRun(t)
-		msg := test.NtfyPollMsgs(topic, ins.NtfyToken, ins.NtfyUri)[0]
+		msg := NtfyPollMsgs(topic, ins.NtfyToken, ins.NtfyUri)[0]
 		assert.Equal(t, "*"+jobName+"@"+hostname+":"+strconv.FormatInt(runInfo.ID, 10)+"* -"+d.emojiText+" Succeeded", msg.Message)
 	}
 }

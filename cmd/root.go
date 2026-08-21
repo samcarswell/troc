@@ -97,7 +97,6 @@ func init() {
 	viper.SetDefault("database", path.Join(homedir, ".config", "troc", "troc.db"))
 	viper.SetDefault("logdir", os.TempDir())
 	viper.SetDefault("clean.days", 30)
-	viper.SetDefault("lockdir", os.TempDir())
 	viper.SetDefault("notify.hostname", hostname)
 	viper.SetDefault("localtime", true)
 	viper.SetDefault("display.emoji", true)
@@ -111,6 +110,8 @@ func init() {
 	viper.SetDefault("notify.status.running", false)
 	viper.SetDefault("notify.status.skipped", false)
 	viper.SetDefault("notify.status.terminated", true)
+	viper.SetDefault("notify.system", config.ConfigNotifySystemNfty)
+	viper.SetDefault("notify.ntfy.domain", "https://ntfy.sh")
 
 	confPath, ok := os.LookupEnv("TROC_CONFIG_PATH")
 	if !ok {
@@ -121,7 +122,10 @@ func init() {
 	viper.SetConfigName(configName)
 	viper.SetConfigType(configType)
 	viper.AutomaticEnv()
-	config.CreateAndReadConfig(confPath, configName, configType)
+	err = config.CreateAndReadConfig(confPath, configName, configType)
+	if err != nil {
+		core.LogErrorAndExit(logger, err, errors.New("unable to create configuration"))
+	}
 }
 
 func getLogType() bool {

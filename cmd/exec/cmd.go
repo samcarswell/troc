@@ -12,11 +12,9 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"syscall"
 
-	"github.com/gofrs/flock"
 	"github.com/samcarswell/troc/cmd"
 	"github.com/samcarswell/troc/config"
 	"github.com/samcarswell/troc/core"
@@ -43,12 +41,6 @@ var execCmd = &cobra.Command{
 		notifyOpt := opts.GetBoolOptOrExit(cmd, notifyOpt)
 		conf := config.GetConfig()
 		queries := config.GetDatabase(cmd.Context())
-		if notifyOpt && conf.Notify.Slack.Token == "" {
-			core.LogErrorAndExit(logger, errors.New("notify is set but notify.slack.token is blank."))
-		}
-		if notifyOpt && conf.Notify.Slack.Channel == "" {
-			core.LogErrorAndExit(logger, errors.New("notify is set but notify.slack.channel is blank."))
-		}
 
 		logFile := config.GetLogFileOrExit(logger, cmd.Context())
 
@@ -59,12 +51,12 @@ var execCmd = &cobra.Command{
 			cmd.Context(),
 			logger,
 			jobName,
-			notifyOpt,
 			conf,
 			queries,
 			logFile,
 			args,
 		)
+
 		data := core.RunShow{
 			ID:            completedRun.Run.ID,
 			JobName:       completedRun.Job.Name,
@@ -76,7 +68,39 @@ var execCmd = &cobra.Command{
 			Pid:           core.FormatPid(completedRun.Run.Pid),
 			Duration:      core.FormatDuration(completedRun.Run.StartTime, completedRun.Run.EndTime.Time),
 		}
+
+		notifyData := core.RunNotify{
+			Run: data,
+			Job: core.JobShow{
+				ID:               completedRun.Job.ID,
+				Name:             completedRun.Job.Name,
+				NotifyLogContent: completedRun.Job.NotifyLogContent,
+			},
+			StatusConfig: conf.Notify.Status,
+			Hostname:     conf.Notify.Hostname,
+		}
+
+		notifyFailed := false
+		if notifyOpt {
+			logger.Info("Sending notify message")
+			ok, err := notify.NotifyRun(
+				conf,
+				notifyData,
+				logger,
+			)
+			if err != nil {
+				logger.Error(errors.Join(err, errors.New("unable to notify")).Error())
+				notifyFailed = true
+			}
+			if !ok {
+				notifyFailed = true
+			}
+		}
+
 		core.PrintJson(data)
+		if notifyFailed {
+			core.LogErrorAndExit(logger, errors.New("command was run, but notification was unable to be sent"))
+		}
 	},
 }
 
@@ -94,7 +118,6 @@ func execRun(
 	ctx context.Context,
 	logger *slog.Logger,
 	jobName string,
-	isNotify bool,
 	conf config.Config,
 	db *data.Queries,
 	logFile string,
@@ -114,34 +137,35 @@ func execRun(
 			NotifyLogContent: false,
 		})
 		if err != nil {
-			core.LogErrorAndExit(logger, err)
+			if err.Error() == "constraint failed: UNIQUE constraint failed: jobs.name (2067)" {
+				logger.Info("Job with name " + jobName + " has been created by another process: using it")
+				jobRow, err = db.GetJob(ctx, jobName)
+				if err != nil {
+					core.LogErrorAndExit(logger, err)
+				}
+
+			} else {
+				core.LogErrorAndExit(logger, err)
+			}
+		} else {
+			jobRow.Job.Name = jobName
+			jobRow.Job.ID = id
 		}
-		jobRow.Job.Name = jobName
-		jobRow.Job.ID = id
 	}
 
-	lockFile := filepath.Join(conf.LockDir, jobName+".lock")
-	f := flock.New(lockFile)
-
-	locked, err := f.TryLock()
-
-	if err != nil || !locked {
+	isRunning, err := db.IsJobRunning(context.Background(), jobName)
+	if err != nil || isRunning {
+		if err != nil {
+			logger.Error(err.Error())
+		}
 		return skipRun(
 			jobRow.Job,
 			logFile,
-			conf,
 			db,
 			context.Background(),
 			logger,
-			isNotify,
 		)
 	}
-	if !locked {
-		core.LogErrorAndExit(logger, errors.New("unable to create lock for job. Likely already running"))
-	}
-
-	defer f.Unlock()
-	logger.Info("Created job lock at " + lockFile)
 
 	stdout, err := os.CreateTemp(conf.LogDir, jobName+".*.log")
 	if err != nil {
@@ -159,6 +183,16 @@ func execRun(
 		ExecLogFile: logFile,
 	})
 	if err != nil {
+		if err.Error() == "constraint failed: already a run for this job with status Running (1811)" {
+			logger.Error(err.Error())
+			return skipRun(
+				jobRow.Job,
+				logFile,
+				db,
+				context.Background(),
+				logger,
+			)
+		}
 		core.LogErrorAndExit(logger, err, errors.New("unable to start run"))
 	}
 	core.LogRunCreated(logger, runId, jobName)
@@ -214,35 +248,18 @@ func execRun(
 		}
 	}
 
-	db.EndRun(context.Background(), data.EndRunParams{
+	err = db.EndRun(context.Background(), data.EndRunParams{
 		Status: string(status),
 		ID:     runId,
 	})
+	if err != nil {
+		core.LogErrorAndExit(logger, err, errors.New("unable to end run"))
+	}
 	core.LogRunCompleted(logger, runId, jobName, status)
 
 	completedRun, err := db.GetRun(ctx, runId)
 	if err != nil {
 		core.LogErrorAndExit(logger, err, errors.New("unable to get completed run"))
-	}
-
-	if isNotify {
-		logger.Info("Sending notify message")
-		ok, err := notify.NotifyRun(
-			conf,
-			notify.RunNotifyInfo{
-				Name:             completedRun.Job.Name,
-				Id:               completedRun.Run.ID,
-				Status:           core.RunStatus(completedRun.Run.Status),
-				LogFile:          completedRun.Run.LogFile,
-				NotifyLogContent: jobRow.Job.NotifyLogContent,
-			},
-		)
-		if err != nil {
-			core.LogErrorAndExit(logger, err, errors.New("unable to notify"))
-		}
-		if !ok {
-			logger.Error("command was run, but notification was unable to be sent")
-		}
 	}
 	return completedRun
 }
@@ -250,11 +267,9 @@ func execRun(
 func skipRun(
 	job data.Job,
 	execLogFile string,
-	conf config.Config,
 	queries *data.Queries,
 	ctx context.Context,
 	logger *slog.Logger,
-	isNotify bool,
 ) data.GetRunRow {
 	id, err := queries.SkipRun(ctx, data.SkipRunParams{
 		JobID:       job.ID,
@@ -270,24 +285,6 @@ func skipRun(
 		core.LogErrorAndExit(logger, err, errors.New("unable to get updated run"))
 	}
 	core.LogRunSkipped(logger, id, job.Name)
-	if isNotify {
-		ok, err := notify.NotifyRun(
-			conf,
-			notify.RunNotifyInfo{
-				Name:             run.Job.Name,
-				Id:               run.Run.ID,
-				Status:           core.RunStatus(run.Run.Status),
-				LogFile:          "",
-				NotifyLogContent: job.NotifyLogContent,
-			},
-		)
-		if err != nil {
-			core.LogErrorAndExit(logger, err, errors.New("unable to notify"))
-		}
-		if !ok {
-			logger.Error("command was run, but notification was unable to be sent")
-		}
-	}
 	row, err := queries.GetRun(ctx, run.Run.ID)
 	if err != nil {
 		core.LogErrorAndExit(logger, err, errors.New("unable to get updated run"))

@@ -77,3 +77,11 @@ and runs.end_time < ?1;
 update runs
 set is_archived = true
 where id = ?;
+
+-- name: IsJobRunning :one
+select
+    count(1) > 0
+from runs, jobs
+where runs.job_id = jobs.id
+and runs.status = 'Running'
+and jobs.name = ?;

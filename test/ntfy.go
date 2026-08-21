@@ -36,18 +36,7 @@ func NtfyPollMsgs(
 	if res.StatusCode < 200 || res.StatusCode > 299 {
 		panic(err)
 	}
-	// bodyBytes, err := io.ReadAll(res.Body)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// rawBody := string(bodyBytes)
-	// fmt.Println(rawBody)
 	var msgs []NtfyMsg
-	//
-	// err = json.Unmarshal(bodyBytes, &msgs)
-	// if err != nil {
-	// 	panic(err)
-	// }
 
 	scanner := bufio.NewScanner(res.Body)
 

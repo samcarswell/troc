@@ -42,8 +42,6 @@ var execCmd = &cobra.Command{
 		conf := config.GetConfig()
 		queries := config.GetDatabase(cmd.Context())
 
-		// TODO: validate notify system setup based on notify.system
-
 		logFile := config.GetLogFileOrExit(logger, cmd.Context())
 
 		if len(args) == 0 {

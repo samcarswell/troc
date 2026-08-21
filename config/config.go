@@ -286,7 +286,6 @@ func setAndValidateConfig() error {
 			},
 		},
 	}
-	// TODO: this is still broken
 	// hardcoded at 100. I don't see how I can do this neatly otherwise
 	for i := range 100 {
 		item := CustomNotifySystemConfigItem{

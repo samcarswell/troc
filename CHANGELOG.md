@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased] - XXXX-XX-XX
+
+### Added
+
+- Notifications can now be sent by `ntfy`.
+- Notifications can now be sent by custom scripts.
+- `job add` prints job info to stdout.
+
+### Changed
+
+- Notifications default to using `ntfy`. Set `notify.system` to `slack` to use Slack.
+
+### Removed
+
+- Config value `lockdir`. Database querying for running jobs has replaced lock files.
+
+### Fixed
+
+- Runs that fail to notify correctly print run information to stdout.
+
 ## [0.5.0] - 2026-07-29
 
 ### Added

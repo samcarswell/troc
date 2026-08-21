@@ -257,6 +257,9 @@ The priority of these notifications is determined by config values `notify.statu
 If a status is set to `true`, this status will cause:
 - A priority of 3 in `ntfy`.
 - Tagging of the channel in `slack`.
+If a status is set to `false`, this status will cause:
+- A priority of 1 in `ntfy`.
+- No tagging of channel in `slack`.
 
 #### Custom systems
 
@@ -333,7 +336,6 @@ MESSAGE="$WALL_MSG: $ID:$JOB - $STATUS"
 
 # Send to third-party system 
 wall "$MESSAGE"
-
 ```
 
 Executing `troc exec --name say-hello --notify "echo 'Hello!'"` will cause the following popup on all shells:
@@ -370,9 +372,17 @@ to include the raw sql migration statements.
 All `./db/migrations/*sql` files are embedded into the binary and ran
 at startup; so just adding the migration file to that directory is enough.
 
-### Running tests
+### Tests
 
-`go test ./...`
+Unit tests are found in the same package as the code it's testing as `*_test.go`, as is `go` convention.
+End-to-End tests are found under `/test/*_test.go`. End-to-End tests directly execute a newly built `troc` binary,
+and interact with a `ntfy` container.
+
+#### Running tests
+
+You will need a container engine that can be used with [testcontainers](https://testcontainers.com/).
+
+`go test ./... -count=1`
 
 ## FAQ
 

@@ -97,7 +97,7 @@ eg. `TROC_DATABASE` or `TROC_NOTIFY_SLACK_TOKEN`.
 | `logdir` | Directory of job log files. | `$TMPDIR` if not empty, otherwise `/tmp` |
 | `logjson` | Output stderr system logs in json format. Note: if defined in `$HOME/.config/troc/config.yaml` this will only take affect after configuration has been loaded. Any logging that occurs before this, such as startup failures, will be in text format. If you are running `troc` in an automated fashion and are relying on stderr system logs being in a json format, ensure that the env var `TROC_LOGJSON=true` is set; this will affect log format immediately. | `false` |
 | `notify.hostname` | Name of server when pushing notifications. eg. `job-name@hostname` | Output of `hostname` |
-| `notify.system` | Determines the notification system to use. | `slack` |
+| `notify.system` | Determines the notification system to use. | `ntfy` |
 | `notify.ntfy.topic` | Ntfy topic to post notifications. | |
 | `notify.ntfy.domain` | Ntfy domain. | `https://ntfy.sh` |
 | `notify.ntfy.token` | Ntfy token. Not required for default domain. |  |

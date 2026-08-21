@@ -198,9 +198,9 @@ type CleanConfig struct {
 }
 
 type CustomNotifySystemConfigItem struct {
-	Name    string   `mapstructure:"name"`
-	Command string   `mapstructure:"command"`
-	EnvVars []string `mapstructure:"envvars"`
+	Name    string
+	Command string
+	EnvVars []string
 }
 
 type NotifyConfig struct {
@@ -245,14 +245,6 @@ var config Config
 
 // TODO: I want a default format config
 func setAndValidateConfig() error {
-	var customNotifyConfs *[]CustomNotifySystemConfigItem
-	if slices.Contains(viper.AllKeys(), "notify.custom") {
-		err := viper.UnmarshalKey("notify.custom", &customNotifyConfs)
-		if err != nil {
-			return err
-		}
-	}
-
 	conf := Config{
 		Database: viper.GetString("database"),
 		LogDir:   viper.GetString("logdir"),
@@ -279,6 +271,7 @@ func setAndValidateConfig() error {
 				Skipped:    viper.GetBool("notify.status.skipped"),
 				Terminated: viper.GetBool("notify.status.terminated"),
 			},
+			Custom: []CustomNotifySystemConfigItem{},
 		},
 		Display: DisplayConfig{
 			Emoji: viper.GetBool("display.emoji"),
@@ -293,12 +286,31 @@ func setAndValidateConfig() error {
 			},
 		},
 	}
-	if customNotifyConfs != nil {
-		conf.Notify.Custom = *customNotifyConfs
+	// TODO: this is still broken
+	// hardcoded at 100. I don't see how I can do this neatly otherwise
+	for i := range 100 {
+		item := CustomNotifySystemConfigItem{
+			Name:    viper.GetString("notify.custom." + strconv.Itoa(i) + ".name"),
+			Command: viper.GetString("notify.custom." + strconv.Itoa(i) + ".command"),
+			EnvVars: []string{},
+		}
+		for j := range 100 {
+			envvar := viper.GetString("notify.custom." + strconv.Itoa(i) + ".envvars." + strconv.Itoa(j))
+			if envvar != "" {
+				item.EnvVars = append(item.EnvVars, envvar)
+			} else {
+				break
+			}
+		}
+		if item.Name != "" {
+			conf.Notify.Custom = append(conf.Notify.Custom, item)
+		} else {
+			break
+		}
 	}
 	var customNotifySystems = map[string]string{}
 	errs := []error{}
-	if customNotifyConfs != nil {
+	if len(conf.Notify.Custom) > 0 {
 		r, _ := regexp.Compile(`^([a-zA-Z0-9])\w+=(.+)`)
 		for i, x := range conf.Notify.Custom {
 			_, ok := customNotifySystems[x.Name]
@@ -309,7 +321,7 @@ func setAndValidateConfig() error {
 			}
 			for i2, e := range x.EnvVars {
 				if !r.MatchString(e) {
-					errs = append(errs, errors.New("notify.custom."+strconv.Itoa(i)+".envars."+strconv.Itoa(i2)+" is not a valid envvar"))
+					errs = append(errs, errors.New("notify.custom."+strconv.Itoa(i)+".envvars."+strconv.Itoa(i2)+" is not a valid envvar"))
 				}
 			}
 			if x.Command == "" {

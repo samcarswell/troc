@@ -70,7 +70,7 @@ func CreateSysLogFile(t *testing.T) (string, *slog.Logger) {
 	return logFile.Name(), l
 }
 
-func UniqueIdentifer() string {
+func UniqueIdentifier() string {
 	b := make([]rune, 10)
 	for i := range b {
 		b[i] = letterRunes[rand.Intn(len(letterRunes))]

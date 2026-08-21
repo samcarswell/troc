@@ -4,7 +4,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/google/uuid"
 	"github.com/samcarswell/troc/core"
 	"github.com/stretchr/testify/assert"
 )
@@ -20,12 +19,12 @@ func Test_NotifyFailure(t *testing.T) {
 	t.Setenv("TROC_NOTIFY_SYSTEM", "ntfy")
 	t.Setenv("TROC_NOTIFY_NTFY_TOKEN", instance.NtfyToken)
 	t.Setenv("TROC_NOTIFY_NTFY_DOMAIN", instance.NtfyUri)
-	jobName := uuid.New().String()
-	randomFile := uuid.New().String() + ".file"
+	jobName := UniqueIdentifier()
+	randomFile := UniqueIdentifier() + ".file"
 	cli := NewTrocCli(t, instance.TrocExe)
 	for _, d := range testData {
-		topic := uuid.New().String()
-		hostname := uuid.New().String()
+		topic := UniqueIdentifier()
+		hostname := UniqueIdentifier()
 		t.Setenv("TROC_NOTIFY_NTFY_TOPIC", topic)
 		t.Setenv("TROC_NOTIFY_HOSTNAME", hostname)
 		t.Setenv("TROC_NOTIFY_STATUS_FAILED", strconv.FormatBool(d.notifyStatusFailed))
@@ -49,11 +48,11 @@ func Test_NotifySucceeded(t *testing.T) {
 	t.Setenv("TROC_NOTIFY_SYSTEM", "ntfy")
 	t.Setenv("TROC_NOTIFY_NTFY_TOKEN", instance.NtfyToken)
 	t.Setenv("TROC_NOTIFY_NTFY_DOMAIN", instance.NtfyUri)
-	jobName := uuid.New().String()
+	jobName := UniqueIdentifier()
 	cli := NewTrocCli(t, instance.TrocExe)
 	for _, d := range testData {
-		topic := uuid.New().String()
-		hostname := uuid.New().String()
+		topic := UniqueIdentifier()
+		hostname := UniqueIdentifier()
 		t.Setenv("TROC_NOTIFY_NTFY_TOPIC", topic)
 		t.Setenv("TROC_NOTIFY_HOSTNAME", hostname)
 		t.Setenv("TROC_NOTIFY_STATUS_SUCCEEDED", strconv.FormatBool(d.notifyStatusSucceeded))
@@ -79,9 +78,9 @@ func Test_NotifySkipped(t *testing.T) {
 	t.Setenv("TROC_NOTIFY_NTFY_DOMAIN", instance.NtfyUri)
 	cli := NewTrocCli(t, instance.TrocExe)
 	for _, d := range testData {
-		topic := uuid.New().String()
-		hostname := uuid.New().String()
-		jobName := uuid.New().String()
+		topic := UniqueIdentifier()
+		hostname := UniqueIdentifier()
+		jobName := UniqueIdentifier()
 		cli.Base.Job.Add(jobName, false).Run()
 		t.Setenv("TROC_NOTIFY_NTFY_TOPIC", topic)
 		t.Setenv("TROC_NOTIFY_HOSTNAME", hostname)
@@ -116,9 +115,9 @@ func Test_NotifyTerminated(t *testing.T) {
 	t.Setenv("TROC_NOTIFY_NTFY_DOMAIN", instance.NtfyUri)
 	cli := NewTrocCli(t, instance.TrocExe)
 	for _, d := range testData {
-		topic := uuid.New().String()
-		hostname := uuid.New().String()
-		jobName := uuid.New().String()
+		topic := UniqueIdentifier()
+		hostname := UniqueIdentifier()
+		jobName := UniqueIdentifier()
 		cli.Base.Job.Add(jobName, false).Run()
 		t.Setenv("TROC_NOTIFY_NTFY_TOPIC", topic)
 		t.Setenv("TROC_NOTIFY_HOSTNAME", hostname)
@@ -148,11 +147,11 @@ func Test_NotifyEmoji(t *testing.T) {
 	t.Setenv("TROC_NOTIFY_SYSTEM", "ntfy")
 	t.Setenv("TROC_NOTIFY_NTFY_TOKEN", instance.NtfyToken)
 	t.Setenv("TROC_NOTIFY_NTFY_DOMAIN", instance.NtfyUri)
-	jobName := uuid.New().String()
+	jobName := UniqueIdentifier()
 	cli := NewTrocCli(t, instance.TrocExe)
 	for _, d := range testData {
-		topic := uuid.New().String()
-		hostname := uuid.New().String()
+		topic := UniqueIdentifier()
+		hostname := UniqueIdentifier()
 		t.Setenv("TROC_NOTIFY_NTFY_TOPIC", topic)
 		t.Setenv("TROC_NOTIFY_HOSTNAME", hostname)
 		t.Setenv("TROC_DISPLAY_EMOJI", strconv.FormatBool(d.showEmoji))

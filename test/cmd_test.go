@@ -1,6 +1,7 @@
 package test
 
 import (
+	"path"
 	"strconv"
 	"strings"
 	"testing"
@@ -127,7 +128,7 @@ func Test_ExecRunNonExistentJob(t *testing.T) {
 	cli := NewTrocCli(t, instance.TrocExe)
 	logdir := t.TempDir()
 	t.Setenv("TROC_LOGDIR", logdir)
-	name := UniqueIdentifer()
+	name := UniqueIdentifier()
 
 	run := cli.Base.Exec(name, "./testdata/script-passes")
 	run.Run()
@@ -160,7 +161,7 @@ func Test_ExecRunExistentJob(t *testing.T) {
 	cli := NewTrocCli(t, instance.TrocExe)
 	logdir := t.TempDir()
 	t.Setenv("TROC_LOGDIR", logdir)
-	name := UniqueIdentifer()
+	name := UniqueIdentifier()
 
 	job := cli.Base.Job.Add(name, false)
 	job.Run()
@@ -190,7 +191,7 @@ func Test_ExecRunExistentJob(t *testing.T) {
 
 func Test_ExecRunScriptFails(t *testing.T) {
 	cli := NewTrocCli(t, instance.TrocExe)
-	name := UniqueIdentifer()
+	name := UniqueIdentifier()
 	run := cli.Base.Exec(name, "./testdata/script-fails")
 	run.Run()
 	runInfo := run.ParseRun(t)
@@ -205,7 +206,7 @@ func Test_ExecRunScriptFails(t *testing.T) {
 
 func Test_ExecCapturesStdoutAndStderr(t *testing.T) {
 	cli := NewTrocCli(t, instance.TrocExe)
-	name := UniqueIdentifer()
+	name := UniqueIdentifier()
 	run := cli.Base.Exec(name, "./testdata/script-stdout-stderr")
 	run.Run()
 	runInfo := run.ParseRun(t)
@@ -220,7 +221,7 @@ func Test_ExecCapturesStdoutAndStderr(t *testing.T) {
 
 func Test_ExecComplexCommand(t *testing.T) {
 	cli := NewTrocCli(t, instance.TrocExe)
-	name := UniqueIdentifer()
+	name := UniqueIdentifier()
 	run := cli.Base.Exec(name, "echo \"Testing again...\" && echo \"and again...\" | awk '{ print toupper($0) }'")
 	run.Run()
 	runInfo := run.ParseRun(t)
@@ -230,4 +231,21 @@ func Test_ExecComplexCommand(t *testing.T) {
 	runCompleted := GetEventOrFail(t, core.EventRunCompleted, log)
 	assert.Equal(t, string(core.RunStatusSucceeded), runCompleted.RunStatus)
 	AssertFileContents(t, "Testing again...\nAND AGAIN...\n", runInfo.LogFile)
+}
+
+func Test_CustomNotify(t *testing.T) {
+	cli := NewTrocCli(t, instance.TrocExe)
+	jobName := UniqueIdentifier()
+	notifyName := UniqueIdentifier()
+	tmpdir := t.TempDir()
+	file := path.Join(tmpdir, "output")
+	t.Setenv("TROC_NOTIFY_SYSTEM", notifyName)
+	t.Setenv("TROC_NOTIFY_CUSTOM_0_NAME", notifyName)
+	t.Setenv("TROC_NOTIFY_CUSTOM_0_COMMAND", "./testdata/script-custom-notify")
+	t.Setenv("TROC_NOTIFY_CUSTOM_0_ENVVARS_0", "CUSTOM_FILE="+file)
+
+	run := cli.Base.ExecNotify(jobName, "echo 'done'")
+	run.Run()
+	runInfo := run.ParseRun(t)
+	AssertFileContents(t, strconv.FormatInt(runInfo.ID, 10)+":"+jobName+" - "+runInfo.Status+"\n", file)
 }

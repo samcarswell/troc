@@ -1,0 +1,10 @@
+#!/bin/bash
+
+readarray text
+
+JOB=$(echo $text | jq -r '.job.name')
+ID=$(echo $text | jq -r '.run.id')
+STATUS=$(echo $text | jq -r '.run.status')
+MESSAGE="$ID:$JOB - $STATUS"
+
+echo "$MESSAGE" > "$CUSTOM_FILE"

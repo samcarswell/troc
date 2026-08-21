@@ -14,7 +14,7 @@ Simple cron (or any script) monitoring
 - Keeps a history of all job runs in a local sqlite database.
 - Query job runs using the `troc` cli.
 - Ensures that only one instance of a job is ran at a time; keeps a log of skipped runs.
-- Notifications. `ntfy` and `slack` support is built-in, but custom systems can be configured.
+- Notifications. [ntfy](https://ntfy.sh/) and [slack](https://slack.com) support is built-in, but custom systems can be configured.
 - Single executable; no daemon.
 
 ## Build

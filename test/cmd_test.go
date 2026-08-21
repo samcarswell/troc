@@ -249,3 +249,20 @@ func Test_CustomNotify(t *testing.T) {
 	runInfo := run.ParseRun(t)
 	AssertFileContents(t, strconv.FormatInt(runInfo.ID, 10)+":"+jobName+" - "+runInfo.Status+"\n", file)
 }
+
+func Test_CustomNotifyFails(t *testing.T) {
+	cli := NewTrocCli(t, instance.TrocExe)
+	jobName := UniqueIdentifier()
+	notifyName := UniqueIdentifier()
+	t.Setenv("TROC_NOTIFY_SYSTEM", notifyName)
+	t.Setenv("TROC_NOTIFY_CUSTOM_0_NAME", notifyName)
+	t.Setenv("TROC_NOTIFY_CUSTOM_0_COMMAND", "./testdata/script-custom-notify-fails")
+
+	run := cli.Base.ExecNotify(jobName, "echo 'done'")
+	run.RunFail()
+	runInfo := run.ParseRun(t)
+	assert.Equal(t, "Succeeded", runInfo.Status)
+	log := run.ExecLogOrFail(t)
+	AssertLogHasError(t, "unable to wait for custom notify command for "+notifyName+"\nexit status 1\nunable to notify", log)
+	AssertLogHasError(t, "command was run, but notification was unable to be sent", log)
+}

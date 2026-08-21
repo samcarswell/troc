@@ -3,6 +3,7 @@ package test
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path"
@@ -125,10 +126,19 @@ func CmdConv[T any](t *testing.T, cmd TrocCmd) T {
 	return val
 }
 
+// TODO: need to pass t down to these
 func (t TrocCmd) Run() {
 	err := t.Cmd.Run()
 	if err != nil {
+		fmt.Println(t.Cmd.Stderr)
 		panic(err)
+	}
+}
+
+func (t TrocCmd) RunFail() {
+	err := t.Cmd.Run()
+	if err != nil {
+		fmt.Println(t.Cmd.Stderr)
 	}
 }
 

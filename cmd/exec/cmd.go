@@ -82,6 +82,7 @@ var execCmd = &cobra.Command{
 			Hostname:     conf.Notify.Hostname,
 		}
 
+		notifyFailed := false
 		if notifyOpt {
 			logger.Info("Sending notify message")
 			ok, err := notify.NotifyRun(
@@ -90,14 +91,18 @@ var execCmd = &cobra.Command{
 				logger,
 			)
 			if err != nil {
-				core.LogErrorAndExit(logger, err, errors.New("unable to notify"))
+				logger.Error(errors.Join(err, errors.New("unable to notify")).Error())
+				notifyFailed = true
 			}
 			if !ok {
-				logger.Error("command was run, but notification was unable to be sent")
+				notifyFailed = true
 			}
 		}
 
 		core.PrintJson(data)
+		if notifyFailed {
+			core.LogErrorAndExit(logger, errors.New("command was run, but notification was unable to be sent"))
+		}
 	},
 }
 

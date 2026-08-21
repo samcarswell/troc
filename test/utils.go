@@ -152,6 +152,10 @@ func AssertLogHasWarn(t *testing.T, text string, log Log) {
 	assertLogHasLine(t, "WARN", text, log)
 }
 
+func AssertLogHasError(t *testing.T, text string, log Log) {
+	assertLogHasLine(t, "ERROR", text, log)
+}
+
 func AssertLogDoesNotHaveInfo(t *testing.T, text string, log Log) {
 	assertLogDoesNotHaveLine(t, "INFO", text, log)
 }

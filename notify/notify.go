@@ -68,7 +68,7 @@ func NotifyRun(
 		if !found {
 			return false, errors.New("unknown notification system: " + conf.Notify.System)
 		}
-		logger.Info("Executing custom notifier: " + conf.Notify.System)
+		logger.Info("notifying using custom notifier: " + conf.Notify.System)
 
 		var runNotifyCmd *exec.Cmd
 		if strings.ContainsAny(systemConf.Command, " ") {

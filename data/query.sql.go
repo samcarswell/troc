@@ -248,6 +248,22 @@ func (q *Queries) GetRuns(ctx context.Context, arg GetRunsParams) ([]GetRunsRow,
 	return items, nil
 }
 
+const isJobRunning = `-- name: IsJobRunning :one
+select
+    count(1) > 0
+from runs, jobs
+where runs.job_id = jobs.id
+and runs.status = 'Running'
+and jobs.name = ?
+`
+
+func (q *Queries) IsJobRunning(ctx context.Context, name string) (bool, error) {
+	row := q.db.QueryRowContext(ctx, isJobRunning, name)
+	var column_1 bool
+	err := row.Scan(&column_1)
+	return column_1, err
+}
+
 const isRunFinished = `-- name: IsRunFinished :one
 select runs.end_time is not null
 from runs

@@ -97,7 +97,6 @@ func init() {
 	viper.SetDefault("database", path.Join(homedir, ".config", "troc", "troc.db"))
 	viper.SetDefault("logdir", os.TempDir())
 	viper.SetDefault("clean.days", 30)
-	viper.SetDefault("lockdir", os.TempDir())
 	viper.SetDefault("notify.hostname", hostname)
 	viper.SetDefault("localtime", true)
 	viper.SetDefault("display.emoji", true)

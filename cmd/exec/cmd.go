@@ -12,11 +12,9 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
-	"path/filepath"
 	"strings"
 	"syscall"
 
-	"github.com/gofrs/flock"
 	"github.com/samcarswell/troc/cmd"
 	"github.com/samcarswell/troc/config"
 	"github.com/samcarswell/troc/core"
@@ -43,6 +41,8 @@ var execCmd = &cobra.Command{
 		notifyOpt := opts.GetBoolOptOrExit(cmd, notifyOpt)
 		conf := config.GetConfig()
 		queries := config.GetDatabase(cmd.Context())
+
+		// TODO: validate notify system setup based on notify.system
 
 		logFile := config.GetLogFileOrExit(logger, cmd.Context())
 
@@ -134,18 +134,27 @@ func execRun(
 			NotifyLogContent: false,
 		})
 		if err != nil {
-			core.LogErrorAndExit(logger, err)
+			if err.Error() == "constraint failed: UNIQUE constraint failed: jobs.name (2067)" {
+				logger.Info("Job with name " + jobName + " has been created by another process: using it")
+				jobRow, err = db.GetJob(ctx, jobName)
+				if err != nil {
+					core.LogErrorAndExit(logger, err)
+				}
+
+			} else {
+				core.LogErrorAndExit(logger, err)
+			}
+		} else {
+			jobRow.Job.Name = jobName
+			jobRow.Job.ID = id
 		}
-		jobRow.Job.Name = jobName
-		jobRow.Job.ID = id
 	}
 
-	lockFile := filepath.Join(conf.LockDir, jobName+".lock")
-	f := flock.New(lockFile)
-
-	locked, err := f.TryLock()
-
-	if err != nil || !locked {
+	isRunning, err := db.IsJobRunning(context.Background(), jobName)
+	if err != nil || isRunning {
+		if err != nil {
+			logger.Error(err.Error())
+		}
 		return skipRun(
 			jobRow.Job,
 			logFile,
@@ -154,12 +163,6 @@ func execRun(
 			logger,
 		)
 	}
-	if !locked {
-		core.LogErrorAndExit(logger, errors.New("unable to create lock for job. Likely already running"))
-	}
-
-	defer f.Unlock()
-	logger.Info("Created job lock at " + lockFile)
 
 	stdout, err := os.CreateTemp(conf.LogDir, jobName+".*.log")
 	if err != nil {
@@ -177,6 +180,16 @@ func execRun(
 		ExecLogFile: logFile,
 	})
 	if err != nil {
+		if err.Error() == "constraint failed: already a run for this job with status Running (1811)" {
+			logger.Error(err.Error())
+			return skipRun(
+				jobRow.Job,
+				logFile,
+				db,
+				context.Background(),
+				logger,
+			)
+		}
 		core.LogErrorAndExit(logger, err, errors.New("unable to start run"))
 	}
 	core.LogRunCreated(logger, runId, jobName)

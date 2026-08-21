@@ -13,7 +13,7 @@ Simple cron (or any script) monitoring
 - Watch and tail stdout/stderr of running or past jobs.
 - Keeps a history of all job runs in a local sqlite database.
 - Query job runs using the `troc` cli.
-- Flock functionality; ensures that only one instance of a job is ran at a time; keeps a log of skipped runs.
+- Ensures that only one instance of a job is ran at a time; keeps a log of skipped runs.
 - Notifications. `ntfy` and `slack` support is built-in, but custom systems can be configured.
 - Single executable; no daemon.
 
@@ -45,7 +45,6 @@ time=2025-11-09T14:02:31.189+11:00 level=INFO msg="Applied: 20251104051400_initi
 time=2025-11-09T14:02:31.189+11:00 level=INFO msg="Applying: 20251108020521_message_cron.sql"
 time=2025-11-09T14:02:31.191+11:00 level=INFO msg="Applied: 20251108020521_message_cron.sql in 2.176757ms"
 time=2025-11-09T14:02:31.195+11:00 level=INFO msg="Job not registered. Creating new Job with name test"
-time=2025-11-09T14:02:31.196+11:00 level=INFO msg="Created job lock at /tmp/test.lock"
 time=2025-11-09T14:02:31.196+11:00 level=INFO msg="Run log created at: /tmp/test.4227158531.log"
 time=2025-11-09T14:02:31.197+11:00 level=INFO msg="Run created with ID 1"
 time=2025-11-09T14:02:31.199+11:00 level=INFO msg="Run 1 completed: Succeeded"
@@ -65,7 +64,6 @@ Subsequent runs won't do this:
 
 ```log
 time=2025-11-09T14:03:18.256+11:00 level=INFO msg="Logging to /tmp/trocsys_yncwi_20251109T030318.log"
-time=2025-11-09T14:03:18.261+11:00 level=INFO msg="Created job lock at /tmp/test.lock"
 time=2025-11-09T14:03:18.261+11:00 level=INFO msg="Run log created at: /tmp/test.2330262208.log"
 time=2025-11-09T14:03:18.262+11:00 level=INFO msg="Run created with ID 2"
 time=2025-11-09T14:03:18.264+11:00 level=INFO msg="Run 2 completed: Succeeded"
@@ -96,7 +94,6 @@ eg. `TROC_DATABASE` or `TROC_NOTIFY_SLACK_TOKEN`.
 | - | - | - |
 | `database` | Path to the sqlite database. | `~/.config/troc/troc.db` |
 | `localtime` | Display dates in local time rather than UTC. | `true` |
-| `lockdir` | Directory of job lock files. | `$TMPDIR` if not empty, otherwise `/tmp` |
 | `logdir` | Directory of job log files. | `$TMPDIR` if not empty, otherwise `/tmp` |
 | `logjson` | Output stderr system logs in json format. Note: if defined in `$HOME/.config/troc/config.yaml` this will only take affect after configuration has been loaded. Any logging that occurs before this, such as startup failures, will be in text format. If you are running `troc` in an automated fashion and are relying on stderr system logs being in a json format, ensure that the env var `TROC_LOGJSON=true` is set; this will affect log format immediately. | `false` |
 | `notify.hostname` | Name of server when pushing notifications. eg. `job-name@hostname` | Output of `hostname` |

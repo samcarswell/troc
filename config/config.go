@@ -234,7 +234,6 @@ type DisplayConfig struct {
 
 type Config struct {
 	Database  string
-	LockDir   string
 	LogDir    string
 	Clean     CleanConfig
 	Notify    NotifyConfig
@@ -244,6 +243,7 @@ type Config struct {
 
 var config Config
 
+// TODO: I want a default format config
 func setAndValidateConfig() error {
 	var customNotifyConfs *[]CustomNotifySystemConfigItem
 	if slices.Contains(viper.AllKeys(), "notify.custom") {
@@ -255,7 +255,6 @@ func setAndValidateConfig() error {
 
 	conf := Config{
 		Database: viper.GetString("database"),
-		LockDir:  viper.GetString("lockdir"),
 		LogDir:   viper.GetString("logdir"),
 		Clean: CleanConfig{
 			Days: viper.GetInt("clean.days"),
